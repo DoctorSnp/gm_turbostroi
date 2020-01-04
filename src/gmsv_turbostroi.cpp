@@ -4,7 +4,11 @@
 #include <string.h>
 #include <stdlib.h>
 #include <deque>
+
+#ifdef _WIN32
 #include <SDKDDKVer.h> // Set the proper SDK version before including boost/Asio и Асио инклюдит windows.h на линуксе просто асио и все
+#endif
+
 #define _SCL_SECURE_NO_WARNINGS
 #include <boost/thread.hpp>
 #include <boost/chrono.hpp>
@@ -20,12 +24,38 @@
 
 using namespace SourceHook;
 
+#ifdef POSIX
+#include <cstdint>
+#define DWORD_PTR uintptr_t
+#endif
+
+#if defined(_MSC_VER)
+    //  Microsoft 
+    #define DLL_EXPORT extern "C" __declspec(dllexport)
+    #define DLL_IMPORT extern "C" __declspec(dllimport)
+#elif defined(__GNUC__)
+    //  GCC
+    #define DLL_EXPORT extern "C" __attribute__((visibility("default")))
+    #define DLL_IMPORT extern "C"
+#else
+    //  do nothing and hope for the best?
+    #define DLL_EXPORT
+    #define DLL_IMPORT
+    #pragma warning Unknown dynamic link import/export semantics.
+#endif
+
 #include "lua.hpp"
 
 //SourceSDK
 #undef _UNICODE
+
+#ifdef _WIN32
 int (WINAPIV * __vsnprintf)(char *, size_t, const char*, va_list) = _vsnprintf;
 int (WINAPIV * __vsnwprintf)(wchar_t *, size_t, const wchar_t*, va_list) = _vsnwprintf;
+#define strdup _strdup
+#define wcsdup _wcsdup
+#endif
+
 #define strdup _strdup
 #define wcsdup _wcsdup
 #include <interface.h>
@@ -197,7 +227,7 @@ int thread_sendmessage_rpc(lua_State* state) {
 	return 0;
 }
 
-extern "C" __declspec(dllexport) bool ThreadSendMessage(void* p, int message, const char* system_name, const char* name, double index, double value) { //Нужно попробывать без extern "C"
+DLL_EXPORT bool ThreadSendMessage(void* p, int message, const char* system_name, const char* name, double index, double value) { //Нужно попробывать без extern "C"
 	bool successful = false;
 
 	thread_userdata* userdata = (thread_userdata*)p;
@@ -242,7 +272,7 @@ int thread_recvmessages(lua_State* state) {
 	return 0;
 }
 
-extern "C" __declspec(dllexport) thread_msg ThreadRecvMessage(void* p) {
+DLL_EXPORT thread_msg ThreadRecvMessage(void* p) {
 	thread_userdata* userdata = (thread_userdata*)p;
 	thread_msg tmsg;
 	if (userdata) {
@@ -251,7 +281,7 @@ extern "C" __declspec(dllexport) thread_msg ThreadRecvMessage(void* p) {
 	return tmsg;
 }
 
-extern "C" __declspec(dllexport) int ThreadReadAvailable(void* p) {
+DLL_EXPORT int ThreadReadAvailable(void* p) {
 	thread_userdata* userdata = (thread_userdata*)p;
 	return userdata->sim_to_thread.read_available();
 }
@@ -260,7 +290,7 @@ extern "C" __declspec(dllexport) int ThreadReadAvailable(void* p) {
 // RailNetwork sim thread API
 //------------------------------------------------------------------------------
 
-extern "C" __declspec(dllexport) bool RnThreadSendMessage(int ent_id, int id, const char* name, double value) {
+DLL_EXPORT bool RnThreadSendMessage(int ent_id, int id, const char* name, double value) {
 	bool successful = true;
 
 	if (rn_userdata) {
