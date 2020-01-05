@@ -5,6 +5,10 @@
 #include <stdlib.h>
 #include <deque>
 
+#ifdef POSIX
+#include <sched.h>
+#endif
+
 #ifdef _WIN32
 #include <SDKDDKVer.h> // Set the proper SDK version before including boost/Asio и Асио инклюдит windows.h на линуксе просто асио и все
 #endif
@@ -395,7 +399,8 @@ void threadRailnetworkSimulation(rn_thread_userdata* userdata) {
 			lua_setglobal(L,"CurrentTime");
 			
 			lua_newtable(L);
-			for each (auto var in trains_pos)
+			
+                        for (auto var: trains_pos)
 			{
 				lua_createtable(L, 0, 3);
 				float* pos = var.second->GetPVSInfo()->m_vCenter;
@@ -619,11 +624,13 @@ LUA_FUNCTION( API_InitializeTrain )
 
 	//Create thread for simulation
 	boost::thread thread(threadSimulation, userdata);
-	if (SimThreadAffinityMask) {
+	#ifdef _WIN32
+        if (SimThreadAffinityMask) {
 		if (!SetThreadAffinityMask(thread.native_handle(), static_cast<DWORD_PTR>(SimThreadAffinityMask))) {
 			ConColorMsg(Color(255,0,0), "Turbostroi: SetSTAffinityMask failed on train thread! \n");
 		}
 	}
+        #endif
 	return 0;
 }
 
@@ -701,11 +708,17 @@ int API_InitializeRailnetwork(ILuaBase* LUA) {
 
 	//Create thread for simulation
 	boost::thread thread(threadRailnetworkSimulation, userdata);
-	if (SimThreadAffinityMask) {
+        #ifdef POSIX
+            printf("Please, make  setaffinit function for thread optimizing\n");
+            //int sched_setaffinity(pid_t pid, unsigned int len, unsigned long *mask);
+        #else
+        if (SimThreadAffinityMask) {
 		if (!SetThreadAffinityMask(thread.native_handle(), static_cast<DWORD_PTR>(SimThreadAffinityMask))) {
 			ConColorMsg(Color(255, 0, 0), "Turbostroi: SetSTAffinityMask failed on rail network thread! \n");
 		}
 	}
+        #endif
+	
 	return 0;
 }
 
@@ -886,6 +899,16 @@ LUA_FUNCTION( API_SetSimulationFPS )
 	return 0;
 }
 
+#ifdef POSIX
+LUA_FUNCTION( API_SetMTAffinityMask ) 
+{
+	LUA->CheckType(1, Type::NUMBER);
+	int MTAffinityMask = (int)LUA->GetNumber(1);
+	ConColorMsg(Color(0, 255, 0), "Turbostroi: Main Thread Running on CPU%d \n", sched_getcpu );
+        printf("Please, make  setaffinit function for thread optimizing\n");
+	return 0;
+}
+#else
 LUA_FUNCTION( API_SetMTAffinityMask ) 
 {
 	LUA->CheckType(1, Type::NUMBER);
@@ -899,6 +922,9 @@ LUA_FUNCTION( API_SetMTAffinityMask )
 	}
 	return 0;
 }
+#endif
+
+
 
 LUA_FUNCTION( API_SetSTAffinityMask ) 
 {
