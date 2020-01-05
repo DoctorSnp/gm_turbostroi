@@ -45,3 +45,4 @@ support/vs2010/*/*
 *.sdf
 *.psess
 *.vsp
+build
