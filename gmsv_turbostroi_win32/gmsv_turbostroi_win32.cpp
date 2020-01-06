@@ -1,6 +1,4 @@
-﻿#include "gmsv_turbostroi_win32.h"
-
-#include <stdio.h>
+﻿#include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <deque>
@@ -395,7 +393,7 @@ void threadRailnetworkSimulation(rn_thread_userdata* userdata) {
 			lua_setglobal(L,"CurrentTime");
 			
 			lua_newtable(L);
-			for each (auto var in trains_pos)
+			for (auto var : trains_pos)
 			{
 				lua_createtable(L, 0, 3);
 				float* pos = var.second->GetPVSInfo()->m_vCenter;
@@ -619,11 +617,11 @@ LUA_FUNCTION( API_InitializeTrain )
 
 	//Create thread for simulation
 	boost::thread thread(threadSimulation, userdata);
-	if (SimThreadAffinityMask) {
+/* 	if (SimThreadAffinityMask) {
 		if (!SetThreadAffinityMask(thread.native_handle(), static_cast<DWORD_PTR>(SimThreadAffinityMask))) {
 			ConColorMsg(Color(255,0,0), "Turbostroi: SetSTAffinityMask failed on train thread! \n");
 		}
-	}
+	} */
 	return 0;
 }
 
@@ -701,11 +699,11 @@ int API_InitializeRailnetwork(ILuaBase* LUA) {
 
 	//Create thread for simulation
 	boost::thread thread(threadRailnetworkSimulation, userdata);
-	if (SimThreadAffinityMask) {
+/* 	if (SimThreadAffinityMask) {
 		if (!SetThreadAffinityMask(thread.native_handle(), static_cast<DWORD_PTR>(SimThreadAffinityMask))) {
 			ConColorMsg(Color(255, 0, 0), "Turbostroi: SetSTAffinityMask failed on rail network thread! \n");
 		}
-	}
+	} */
 	return 0;
 }
 
@@ -888,7 +886,7 @@ LUA_FUNCTION( API_SetSimulationFPS )
 
 LUA_FUNCTION( API_SetMTAffinityMask ) 
 {
-	LUA->CheckType(1, Type::NUMBER);
+/* 	LUA->CheckType(1, Type::NUMBER);
 	int MTAffinityMask = (int)LUA->GetNumber(1);
 	ConColorMsg(Color(0, 255, 0), "Turbostroi: Main Thread Running on CPU%i \n", GetCurrentProcessorNumber());
 	if (!SetThreadAffinityMask(GetCurrentThread(), static_cast<DWORD_PTR>(MTAffinityMask))) {
@@ -896,7 +894,7 @@ LUA_FUNCTION( API_SetMTAffinityMask )
 	}
 	else {
 		ConColorMsg(Color(0, 255, 0), "Turbostroi: Changed to CPU%i \n", GetCurrentProcessorNumber());
-	}
+	} */
 	return 0;
 }
 
