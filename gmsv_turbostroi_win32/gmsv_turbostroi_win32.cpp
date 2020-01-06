@@ -905,14 +905,14 @@ LUA_FUNCTION( API_SetSTAffinityMask )
 	return 0;
 }
 
-LUA_FUNCTION( API_StartRailNetwork ) 
+/* LUA_FUNCTION( API_StartRailNetwork ) 
 {
 	if (rn_userdata) {
 		API_DeinitializeRailnetwork( LUA );
 	}
 	API_InitializeRailnetwork( LUA );
 	return 0;
-}
+} */
 
 //------------------------------------------------------------------------------
 // Initialization SourceSDK
@@ -997,8 +997,8 @@ GMOD_MODULE_OPEN() {
 	LUA->SetField(-2,"InitializeTrain");
 	LUA->PushCFunction(API_DeinitializeTrain);
 	LUA->SetField(-2,"DeinitializeTrain");
-	LUA->PushCFunction(API_StartRailNetwork);
-	LUA->SetField(-2,"StartRailNetwork");
+/* 	LUA->PushCFunction(API_StartRailNetwork);
+	LUA->SetField(-2,"StartRailNetwork"); */
 	//LUA->PushCFunction(API_Think); // depricated. using engine think hook
 	//LUA->SetField(-2,"Think");
 	LUA->PushCFunction(API_SendMessage);
@@ -1024,6 +1024,8 @@ GMOD_MODULE_OPEN() {
 	LUA->SetField(-2,"SetSimulationFPS");
 	//LUA->PushCFunction(API_SetTargetTime); //deprecated. using engine think hook
 	//LUA->SetField(-2,"SetTargetTime");
+	LUA->PushCFunction(Think_handler);
+	LUA->SetField(-2, "Think_handler");
 	LUA->PushCFunction(API_SetMTAffinityMask);
 	LUA->SetField(-2, "SetMTAffinityMask");
 	LUA->PushCFunction(API_SetSTAffinityMask);
