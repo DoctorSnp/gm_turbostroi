@@ -14,7 +14,7 @@ include(GNUInstallDirs)
 
 #file(GLOB MetamodSourcesHook RELATIVE "external/metamod-source/core/sourcehook/" "*.cpp")
 
-
+find_package(Threads REQUIRED)
 
 file( GLOB GLOB_LIB_SRC_LIST
     #"external/metamod-source/core/sourcehook/ *.h"
@@ -67,8 +67,6 @@ ${PROJECT_NAME} SHARED  ${LIB_SRC}
 )
 
 
-target_link_libraries(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/depends/boost_1_71_0/stage1/lib/libboost_thread.a )
-target_link_libraries(${PROJECT_NAME}  PRIVATE ${PROJECT_SOURCE_DIR}/depends/boost_1_71_0/stage1/lib/libboost_chrono.a )
 
 target_include_directories(
         ${PROJECT_NAME} PUBLIC 
@@ -92,3 +90,11 @@ target_include_directories(
 set_target_properties(${PROJECT_NAME} PROPERTIES COMPILE_FLAGS "-m32" LINK_FLAGS "-m32 -z defs" )
 set_target_properties(${PROJECT_NAME} PROPERTIES  VERSION ${PROJECT_VERSION})
 
+find_package(BOOST REQUIRED COMPONENTS system thread chrono)
+
+#target_link_libraries(${PROJECT_NAME} /usr/lib32/libpthread.a)
+#target_link_libraries(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/depends/boost_1_71_0/stage/lib/libboost_system.a )
+#target_link_libraries(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/depends/boost_1_71_0/stage/lib/libboost_thread.a )
+#target_link_libraries(${PROJECT_NAME}  PRIVATE ${PROJECT_SOURCE_DIR}/depends/boost_1_71_0/stage/lib/libboost_chrono.a )
+#target_link_libraries(${PROJECT_NAME}  PRIVATE ${PROJECT_SOURCE_DIR}/depends/boost_1_71_0/stage/lib/libboost_date_time.a )
+#target_link_libraries(${PROJECT_NAME}  PRIVATE ${PROJECT_SOURCE_DIR}/depends/boost_1_71_0/stage/lib/libboost_atomic.a )
