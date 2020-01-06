@@ -3,16 +3,8 @@ cmake_minimum_required (VERSION 3.15) #Проверка версии Cmake
 
 project(gmsv_turbostroi VERSION 2.0.2 DESCRIPTION "gmsv_turbostroi description")
 message ("Start building ${PROJECT_NAME}")
-if ( CMAKE_COMPILER_IS_GNUCXX ) 
-    set (CMAKE_CXX_FLAGS "-Wall -fPIC -O2 -L/usr/local/lib") 
-else ()
-    message (FATAL_ERROR "I can't find G++!")
-endif ()
-
 
 include(GNUInstallDirs)
-
-#file(GLOB MetamodSourcesHook RELATIVE "external/metamod-source/core/sourcehook/" "*.cpp")
 
 find_package(Threads REQUIRED)
 
@@ -34,7 +26,7 @@ file( GLOB GLOB_SOURCESDK
     #"external/sourcesdk-minimal/public/shaderapi/*.h"
     "external/sourcesdk-minimal/public/shaderapi/*.cpp"
     #"external/sourcesdk-minimal/public/tier0/*.h"
-    "external/sourcesdk-minimal/public/tier0/*.cpp"
+    "external/sourcesdk-minimal/public/tier0/memoverride.cpp"
     
     #"external/sourcesdk-minimal/public/tier1/*.h"
     "external/sourcesdk-minimal/tier1/*.h"
@@ -55,8 +47,8 @@ set (LIB_SRC
 add_definitions(-DGNUC  -DPOSIX  -D_LINUX -DLINUX )
 
 set(CMAKE_SYSTEM_PROCESSOR "i686")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m32" CACHE STRING "c++ flags")
-set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS} -m32" CACHE STRING "c flags")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m32 -Wall -fPIC -O2" CACHE STRING "c++ flags")
+set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS} -m32 -Wall -fPIC -O2" CACHE STRING "c flags")
 
 #find_library( BOOST32_SYSTEM  libboost_system.a PATHS depends/boost_1_71_0/stage/lib/ )
 #find_library( BOOST32_THREAD libboost_thread.a PATHS   depends/boost_1_71_0/stage/lib/ )
@@ -82,6 +74,7 @@ target_include_directories(
         ${PROJECT_SOURCE_DIR}/external/sourcesdk-minimal/public/tier1/
         ${PROJECT_SOURCE_DIR}/external/metamod-source/core/sourcehook/
         ${PROJECT_SOURCE_DIR}/external/garrysmod/include/GarrysMod/Lua/
+        ${PROJECT_SOURCE_DIR}/include/
         ${PROJECT_SOURCE_DIR}/depends/
         #${PROJECT_SOURCE_DIR}/external/luajit/
 )
@@ -90,11 +83,11 @@ target_include_directories(
 set_target_properties(${PROJECT_NAME} PROPERTIES COMPILE_FLAGS "-m32" LINK_FLAGS "-m32 -z defs" )
 set_target_properties(${PROJECT_NAME} PROPERTIES  VERSION ${PROJECT_VERSION})
 
-find_package(BOOST REQUIRED COMPONENTS system thread chrono)
+#find_package(BOOST REQUIRED COMPONENTS system thread chrono)
 
 #target_link_libraries(${PROJECT_NAME} /usr/lib32/libpthread.a)
-#target_link_libraries(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/depends/boost_1_71_0/stage/lib/libboost_system.a )
-#target_link_libraries(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/depends/boost_1_71_0/stage/lib/libboost_thread.a )
+target_link_libraries(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/depends/boost_1_71_0/stage/lib/libboost_system.a )
+target_link_libraries(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/depends/boost_1_71_0/stage/lib/libboost_thread.a )
 #target_link_libraries(${PROJECT_NAME}  PRIVATE ${PROJECT_SOURCE_DIR}/depends/boost_1_71_0/stage/lib/libboost_chrono.a )
 #target_link_libraries(${PROJECT_NAME}  PRIVATE ${PROJECT_SOURCE_DIR}/depends/boost_1_71_0/stage/lib/libboost_date_time.a )
 #target_link_libraries(${PROJECT_NAME}  PRIVATE ${PROJECT_SOURCE_DIR}/depends/boost_1_71_0/stage/lib/libboost_atomic.a )
