@@ -54,9 +54,7 @@ int (WINAPIV * __vsnwprintf)(wchar_t *, size_t, const wchar_t*, va_list) = _vsnw
 #define wcsdup _wcsdup
 #endif
 
-#define strdup _strdup
-#define wcsdup _wcsdup
-#include <interface.h>
+/* #include <interface.h>
 #include <eiface.h>
 #include <Color.h>
 #include <dbg.h>
@@ -66,7 +64,7 @@ int (WINAPIV * __vsnwprintf)(wchar_t *, size_t, const wchar_t*, va_list) = _vsnw
 #include <icvar.h>
 #define GAME_DLL
 #include "../game/server/cbase.h"
-#undef GAME_DLL
+#undef GAME_DLL */
 #define _UNICODE
 
 #define GARRYSMOD_LUA_SOURCECOMPAT_H
@@ -75,17 +73,17 @@ using namespace GarrysMod::Lua;
 //------------------------------------------------------------------------------
 // SourceSDK
 //------------------------------------------------------------------------------
-SourceHook::Impl::CSourceHookImpl g_SourceHook;
-SourceHook::ISourceHook *g_SHPtr = &g_SourceHook;
+/* SourceHook::Impl::CSourceHookImpl g_SourceHook;
+SourceHook::ISourceHook *g_SHPtr = &g_SourceHook; */
 int g_PLID = 0;
-CGlobalVars *g_GlobalVars = NULL;
+//CGlobalVars *g_GlobalVars = NULL;
 
-IVEngineServer *engineServer = NULL;
+/* IVEngineServer *engineServer = NULL;
 IServerGameDLL *engineServerDLL = NULL;
 IGameEventManager2 *gameEventManager = NULL; // game events interface
 IPlayerInfoManager *playerInfoManager = NULL;
 ICvar *g_pCVar = NULL;
-
+ */
 //------------------------------------------------------------------------------
 // Lua Utils
 //------------------------------------------------------------------------------
@@ -917,7 +915,7 @@ LUA_FUNCTION( API_SetSTAffinityMask )
 //------------------------------------------------------------------------------
 // Initialization SourceSDK
 //------------------------------------------------------------------------------
-SH_DECL_HOOK1_void(IServerGameDLL, Think, SH_NOATTRIB, 0, bool);
+//SH_DECL_HOOK1_void(IServerGameDLL, Think, SH_NOATTRIB, 0, bool);
 LUA_FUNCTION (Think_handler)
 {
 	target_time = g_GlobalVars->curtime;
@@ -1129,9 +1127,5 @@ GMOD_MODULE_OPEN() {
 // Deinitialization
 //------------------------------------------------------------------------------
 GMOD_MODULE_CLOSE() {
-	ConCommand* cmd = g_pCVar->FindCommand("turbostroi_clear_cache");
-	if (cmd != nullptr) {
-		g_pCVar->UnregisterConCommand(cmd);
-	}
 	return 0;
 }
