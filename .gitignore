@@ -46,3 +46,7 @@ support/vs2010/*/*
 *.psess
 *.vsp
 build
+external/luajit/origin_5.1.4/
+source-sdk-2013/
+src/libgmsv_turbostroi_linux.so
+src/libgmsv_turbostroi_linux_ok.so
