@@ -918,48 +918,109 @@ LUA_FUNCTION( API_SetSTAffinityMask )
 // Initialization SourceSDK
 //------------------------------------------------------------------------------
 SH_DECL_HOOK1_void(IServerGameDLL, Think, SH_NOATTRIB, 0, bool);
-static void Think_handler(bool finalTick) {
+LUA_FUNCTION (Think_handler)
+{
 	target_time = g_GlobalVars->curtime;
 	shared_message msg;
 	if (printMessages.pop(msg)) {
-		ConColorMsg(Color(255, 0, 255), msg.message);
+		//ConColorMsg(Color(255, 0, 255), msg.message);
+		state->PushSpecial(GarrysMod::Lua::SPECIAL_GLOB);
+		state->GetField(-1, "MsgC");
+		state->GetField(-2, "Color");
+		state->PushNumber(255);
+		state->PushNumber(0);
+		state->PushNumber(255);
+		state->Call(3, 1);
+		state->PushString(msg.message);
+		state->Call(2, 0);
+		state->Pop();
 	}
 }
 
-void InstallHooks() {
+/* void InstallHooks() {
 	ConColorMsg(Color(0, 255, 0), "Turbostroi: Installing hooks!\n");
 	SH_ADD_HOOK_STATICFUNC(IServerGameDLL, Think, engineServerDLL, Think_handler, false);
-}
+} */
 
 void ClearLoadCache(const CCommand &command) {
 	load_files_cache.clear();
-	ConColorMsg(Color(0, 255, 0), "Turbostroi: Cache cleared!\n");
+	//ConColorMsg(Color(0, 255, 0), "Turbostroi: Cache cleared!\n");
+	state->PushSpecial(GarrysMod::Lua::SPECIAL_GLOB);
+	state->GetField(-1, "MsgC");
+	state->GetField(-2, "Color");
+	state->PushNumber(0);
+	state->PushNumber(255);
+	state->PushNumber(0);
+	state->Call(3, 1);
+	state->PushString("Turbostroi: Cache cleared!");
+	state->Call(2, 0);
+	state->Pop();
 }
 
 void InitInterfaces() {
 	Sys_LoadInterface("engine", INTERFACEVERSION_VENGINESERVER, NULL, reinterpret_cast<void**>(&engineServer));
 	if (!engineServer)
 	{ 
-		ConColorMsg(Color(255, 0, 0), "Turbostroi: Unable to load Engine Interface!\n");
+		//ConColorMsg(Color(255, 0, 0), "Turbostroi: Unable to load Engine Interface!\n");
+	state->PushSpecial(GarrysMod::Lua::SPECIAL_GLOB);
+	state->GetField(-1, "MsgC");
+	state->GetField(-2, "Color");
+	state->PushNumber(255);
+	state->PushNumber(0);
+	state->PushNumber(0);
+	state->Call(3, 1);
+	state->PushString("Turbostroi: Unable to load Engine Interface!");
+	state->Call(2, 0);
+	state->Pop();
 	}
 	Sys_LoadInterface("server", INTERFACEVERSION_SERVERGAMEDLL, NULL, reinterpret_cast<void**>(&engineServerDLL));
 	if (!engineServerDLL)
 	{
-		ConColorMsg(Color(255, 0, 0), "Turbostroi: Unable to load SGameDLL Interface!\n");
+		//ConColorMsg(Color(255, 0, 0), "Turbostroi: Unable to load SGameDLL Interface!\n");
+	state->PushSpecial(GarrysMod::Lua::SPECIAL_GLOB);
+	state->GetField(-1, "MsgC");
+	state->GetField(-2, "Color");
+	state->PushNumber(255);
+	state->PushNumber(0);
+	state->PushNumber(0);
+	state->Call(3, 1);
+	state->PushString("Turbostroi: Unable to load SGameDLL Interface!");
+	state->Call(2, 0);
+	state->Pop();
 	}
 	Sys_LoadInterface("server", INTERFACEVERSION_PLAYERINFOMANAGER, NULL, reinterpret_cast<void**>(&playerInfoManager));
 	if (!playerInfoManager)
 	{
-		ConColorMsg(Color(255, 0, 0), "Turbostroi: Unable to load PlayerInfoManager Interface!\n");
+		//ConColorMsg(Color(255, 0, 0), "Turbostroi: Unable to load PlayerInfoManager Interface!\n");
+	state->PushSpecial(GarrysMod::Lua::SPECIAL_GLOB);
+	state->GetField(-1, "MsgC");
+	state->GetField(-2, "Color");
+	state->PushNumber(255);
+	state->PushNumber(0);
+	state->PushNumber(0);
+	state->Call(3, 1);
+	state->PushString("Turbostroi: Unable to load PlayerInfoManager Interface!");
+	state->Call(2, 0);
+	state->Pop();
 	}
 	Sys_LoadInterface("vstdlib", CVAR_INTERFACE_VERSION, NULL, reinterpret_cast<void**>(&g_pCVar));
 	if (!g_pCVar)
 	{
-		ConColorMsg(Color(255, 0, 0), "Turbostroi: Unable to load CVAR Interface!\n");
+		//ConColorMsg(Color(255, 0, 0), "Turbostroi: Unable to load CVAR Interface!\n");
+	state->PushSpecial(GarrysMod::Lua::SPECIAL_GLOB);
+	state->GetField(-1, "MsgC");
+	state->GetField(-2, "Color");
+	state->PushNumber(255);
+	state->PushNumber(0);
+	state->PushNumber(0);
+	state->Call(3, 1);
+	state->PushString("Turbostroi: Unable to load CVAR Interface!");
+	state->Call(2, 0);
+	state->Pop();
 	}
 
 	if (playerInfoManager) g_GlobalVars = playerInfoManager->GetGlobalVars();
-	InstallHooks();
+	//InstallHooks();
 
 	g_pCVar->RegisterConCommand(new ConCommand("turbostroi_clear_cache", ClearLoadCache, "Clear loaded files cache."));
 }
@@ -1047,7 +1108,17 @@ GMOD_MODULE_OPEN() {
 	LUA->Pop();
 
 	if (!printMessages.is_lock_free()) {
-		ConColorMsg(Color(255, 0, 0), "Turbostroi: Not fully supported! \n");
+		//ConColorMsg(Color(255, 0, 0), "Turbostroi: Not fully supported! \n");
+	state->PushSpecial(GarrysMod::Lua::SPECIAL_GLOB);
+	state->GetField(-1, "MsgC");
+	state->GetField(-2, "Color");
+	state->PushNumber(255);
+	state->PushNumber(0);
+	state->PushNumber(0);
+	state->Call(3, 1);
+	state->PushString("Turbostroi: Not fully supported!");
+	state->Call(2, 0);
+	state->Pop();
 	}
 
 	return 0;

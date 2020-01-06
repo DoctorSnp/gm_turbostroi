@@ -17,7 +17,7 @@ add_library(${PROJECT_NAME} SHARED ${SRC_FILES})
 set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "")
 set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "${PROJECT_NAME}${SUFFIX}")
 set_target_properties(${PROJECT_NAME} PROPERTIES SUFFIX ".dll")
-set_target_properties(${PROJECT_NAME} PROPERTIES COMPILE_FLAGS "-m32" LINK_FLAGS "-m32 -z defs -lpthread" )
+set_target_properties(${PROJECT_NAME} PROPERTIES COMPILE_FLAGS "-m32" LINK_FLAGS "-m32 -z defs -lpthread -ldl" )
 
 target_include_directories(${PROJECT_NAME} PRIVATE external/sourcesdk-minimal/common)
 target_include_directories(${PROJECT_NAME} PRIVATE external/metamod-source/core/sourcehook)
