@@ -2,49 +2,106 @@
 cmake_minimum_required (VERSION 3.15) #Проверка версии Cmake
 
 project(gmsv_turbostroi VERSION 2.0.2 DESCRIPTION "gmsv_turbostroi description")
-message ("Start building turbostroi")
-include(GNUInstallDirs)
-add_library(gmsv_turbostroi SHARED src/gmsv_turbostroi.cpp)
-
-#link_directories("../bin-libs")
-#target_link_libraries (gmsv_turbostroi "lua5.1.5")
-
-# требуем от gcc генерировать 32битный код даже на 64 битном линуксе
-set_target_properties(gmsv_turbostroi PROPERTIES COMPILE_FLAGS "-m32" LINK_FLAGS "-m32" )
-set_target_properties(gmsv_turbostroi PROPERTIES  VERSION ${PROJECT_VERSION})
-
-                        
-add_definitions(-DGNUC -DPOSIX -D_LINUX )
-
-# Папка с заголовочными файлами.
-#set (CMAKE_INCLUDE_PATH include) 
-set(CMAKE_SYSTEM_PROCESSOR "i686")
-
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DPOSIX")
-set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS} -DPOSIX")
-
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m32" CACHE STRING "c++ flags")
-set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS} -m32" CACHE STRING "c flags")
-
-include_directories(
-"./external/"
-"./external/garrysmod/include/"
-"./external/sourcesdk-minimal/game/shared/"
-"./external/sourcesdk-minimal/public/shaderapi/"
-"./external/sourcesdk-minimal/game/server"
-"./external/sourcesdk-minimal/public/tier0/"
-"./external/sourcesdk-minimal/public/"
-"./external/sourcesdk-minimal/public/tier1/"
-"./external/metamod-source/core/sourcehook/"
-"./external/garrysmod/include/GarrysMod/Lua/",
-"./external/luajit/"
-"../include/luajit/"
-    )
-
+message ("Start building ${PROJECT_NAME}")
 if ( CMAKE_COMPILER_IS_GNUCXX ) 
     set (CMAKE_CXX_FLAGS "-Wall -fPIC -O2 -L/usr/local/lib") 
 else ()
     message (FATAL_ERROR "I can't find G++!")
 endif ()
 
+
+include(GNUInstallDirs)
+
+#file(GLOB MetamodSourcesHook RELATIVE "external/metamod-source/core/sourcehook/" "*.cpp")
+
+
+
+file( GLOB GLOB_LIB_SRC_LIST
+    #"external/metamod-source/core/sourcehook/ *.h"
+    "external/metamod-source/core/sourcehook/*.cpp"
+    #"external/metamod-source/core/metamod.cpp"
+    )
+
+#file( GLOB GLOB_LIB_LUA
+#    "external/luajit/ *.h"
+#    "external/luajit/*.c"
+#    )
+    
+file( GLOB GLOB_SOURCESDK
+    #"external/sourcesdk-minimal/game/shared/*.h"
+    "external/sourcesdk-minimal/game/shared/*.cpp"
+    #"external/sourcesdk-minimal/game/server/*.h"
+    "external/sourcesdk-minimal/game/server/*.cpp"
+    #"external/sourcesdk-minimal/public/shaderapi/*.h"
+    "external/sourcesdk-minimal/public/shaderapi/*.cpp"
+    #"external/sourcesdk-minimal/public/tier0/*.h"
+    "external/sourcesdk-minimal/public/tier0/*.cpp"
+    
+    #"external/sourcesdk-minimal/public/tier1/*.h"
+    "external/sourcesdk-minimal/tier1/*.h"
+    "external/sourcesdk-minimal/tier1/*.cpp"
+    "external/sourcesdk-minimal/public/tier1/*.cpp"
+)
+
+
+set (LIB_SRC 
+    src/gmsv_turbostroi.cpp
+    ${GLOB_LIB_SRC_LIST}
+    #${GLOB_SOURCESDK}
+ #   ${GLOB_LIB_LUA}
+)
+
+#add_definitions(-DGNUC  -DPOSIX  -D_LINUX )
+
+set(CMAKE_SYSTEM_PROCESSOR "i686")
+
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DGNUC  -DPOSIX  -D_LINUX -L../bin_libs/ -llua5.1.5")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DGNUC  -DPOSIX  -DLINUX -D_LINUX")
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m32" CACHE STRING "c++ flags")
+
+set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS} -DGNUC  -DPOSIX  -DLINUX -D_LINUX")
+set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS} -m32" CACHE STRING "c flags")
+
+#set(Boost_USE_STATIC_LIBS   ON)
+#find_package(Boost REQUIRED ...)
+
+#FIND_PACKAGE( Boost 1.40 COMPONENTS program_options REQUIRED )
+#INCLUDE_DIRECTORIES( ${Boost_INCLUDE_DIR} )
+
+find_library( LUA_LIB liblua5.1.5.a PATHS ./bin_libs/)
+find_library( BOOST32_THREAD libboost_thread.so.1.65.1 PATHS /usr/lib32/)
+#find_library( TIER1_LIB tier1.a PATHS sourcesdk/lib/public/linux32)
+
+
+add_library( ${PROJECT_NAME} SHARED  ${LIB_SRC} ${BOOST32_THREAD} )
+
+
+#TARGET_LINK_LIBRARIES( anyExecutable LINK_PUBLIC ${Boost_LIBRARIES} )
+
+
+target_link_libraries(${PROJECT_NAME}  ${LUA_LIB})
+
+
+
+target_include_directories(
+        ${PROJECT_NAME} PUBLIC 
+        ${PROJECT_SOURCE_DIR}/external/
+        ${PROJECT_SOURCE_DIR}/external/garrysmod/include/
+        ${PROJECT_SOURCE_DIR}/external/sourcesdk-minimal/game/shared/
+        ${PROJECT_SOURCE_DIR}/external/sourcesdk-minimal/game/server
+        ${PROJECT_SOURCE_DIR}/external/sourcesdk-minimal/public/shaderapi/
+        ${PROJECT_SOURCE_DIR}/external/sourcesdk-minimal/public/
+        ${PROJECT_SOURCE_DIR}/external/sourcesdk-minimal/public/tier0/
+        ${PROJECT_SOURCE_DIR}/external/sourcesdk-minimal/
+        ${PROJECT_SOURCE_DIR}/external/sourcesdk-minimal/tier1/
+        ${PROJECT_SOURCE_DIR}/external/sourcesdk-minimal/public/tier1/
+        ${PROJECT_SOURCE_DIR}/external/metamod-source/core/sourcehook/
+        ${PROJECT_SOURCE_DIR}/external/garrysmod/include/GarrysMod/Lua/
+        ${PROJECT_SOURCE_DIR}/external/luajit/
+)
+
+# требуем от gcc генерировать 32битный код даже на 64 битном линуксе
+set_target_properties(${PROJECT_NAME} PROPERTIES COMPILE_FLAGS "-m32" LINK_FLAGS "-m32 -z defs" )
+set_target_properties(${PROJECT_NAME} PROPERTIES  VERSION ${PROJECT_VERSION})
 
