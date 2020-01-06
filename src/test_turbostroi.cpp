@@ -1,9 +1,9 @@
  
-#include "gm_turbostroi.h"
+#include "gmsv_turbostroi.h"
 
 int main(int argc, char *argv[])
 {
-    Turbo test;
+    TurboTest test;
     test.print();
     return 0;
 }

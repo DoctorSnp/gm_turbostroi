@@ -22,10 +22,9 @@ file( GLOB GLOB_LIB_SRC_LIST
     #"external/metamod-source/core/metamod.cpp"
     )
 
-#file( GLOB GLOB_LIB_LUA
-#    "external/luajit/ *.h"
-#    "external/luajit/*.c"
-#    )
+file( GLOB GLOB_LIB_LUA
+    "depends/lua-5.1.5/src/*.c"
+    )
     
 file( GLOB GLOB_SOURCESDK
     #"external/sourcesdk-minimal/game/shared/*.h"
@@ -46,43 +45,30 @@ file( GLOB GLOB_SOURCESDK
 
 set (LIB_SRC 
     src/gmsv_turbostroi.cpp
+    depends/lua-5.1.5/src/lapi.c
     ${GLOB_LIB_SRC_LIST}
+    ${GLOB_LIB_LUA}
     #${GLOB_SOURCESDK}
- #   ${GLOB_LIB_LUA}
+    
 )
 
-#add_definitions(-DGNUC  -DPOSIX  -D_LINUX )
+add_definitions(-DGNUC  -DPOSIX  -D_LINUX -DLINUX )
 
 set(CMAKE_SYSTEM_PROCESSOR "i686")
-
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DGNUC  -DPOSIX  -D_LINUX -L../bin_libs/ -llua5.1.5")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DGNUC  -DPOSIX  -DLINUX -D_LINUX")
-
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m32" CACHE STRING "c++ flags")
-
-set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS} -DGNUC  -DPOSIX  -DLINUX -D_LINUX")
 set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS} -m32" CACHE STRING "c flags")
 
-#set(Boost_USE_STATIC_LIBS   ON)
-#find_package(Boost REQUIRED ...)
+#find_library( BOOST32_SYSTEM  libboost_system.a PATHS depends/boost_1_71_0/stage/lib/ )
+#find_library( BOOST32_THREAD libboost_thread.a PATHS   depends/boost_1_71_0/stage/lib/ )
+#find_library( BOOST32_CHRONO  libboost_chrono.a PATHS depends/boost_1_71_0/stage1/lib/)
 
-#FIND_PACKAGE( Boost 1.40 COMPONENTS program_options REQUIRED )
-#INCLUDE_DIRECTORIES( ${Boost_INCLUDE_DIR} )
-
-find_library( LUA_LIB liblua5.1.5.a PATHS ./bin_libs/)
-find_library( BOOST32_THREAD libboost_thread.so.1.65.1 PATHS /usr/lib32/)
-#find_library( TIER1_LIB tier1.a PATHS sourcesdk/lib/public/linux32)
+add_library ( 
+${PROJECT_NAME} SHARED  ${LIB_SRC} 
+)
 
 
-add_library( ${PROJECT_NAME} SHARED  ${LIB_SRC} ${BOOST32_THREAD} )
-
-
-#TARGET_LINK_LIBRARIES( anyExecutable LINK_PUBLIC ${Boost_LIBRARIES} )
-
-
-target_link_libraries(${PROJECT_NAME}  ${LUA_LIB})
-
-
+target_link_libraries(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/depends/boost_1_71_0/stage1/lib/libboost_thread.a )
+target_link_libraries(${PROJECT_NAME}  PRIVATE ${PROJECT_SOURCE_DIR}/depends/boost_1_71_0/stage1/lib/libboost_chrono.a )
 
 target_include_directories(
         ${PROJECT_NAME} PUBLIC 
@@ -98,7 +84,8 @@ target_include_directories(
         ${PROJECT_SOURCE_DIR}/external/sourcesdk-minimal/public/tier1/
         ${PROJECT_SOURCE_DIR}/external/metamod-source/core/sourcehook/
         ${PROJECT_SOURCE_DIR}/external/garrysmod/include/GarrysMod/Lua/
-        ${PROJECT_SOURCE_DIR}/external/luajit/
+        ${PROJECT_SOURCE_DIR}/depends/
+        #${PROJECT_SOURCE_DIR}/external/luajit/
 )
 
 # требуем от gcc генерировать 32битный код даже на 64 битном линуксе

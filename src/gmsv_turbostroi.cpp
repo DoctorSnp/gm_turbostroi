@@ -16,8 +16,10 @@
 
 #define _SCL_SECURE_NO_WARNINGS
 
+//#define lua_getglobal(L,s)	lua_getfield(L, LUA_GLOBALSINDEX, (s))
+
 /* DISABLING TEST */
-//#define NO_BOOST
+//#define NO_BOOST # на будущее, чтобы буст не требовался
 #ifdef NO_BOOST
 #include <thread>
 #include <chrono>
@@ -64,8 +66,10 @@ using namespace SourceHook;
     #pragma warning Unknown dynamic link import/export semantics.
 #endif
 
-#include "lua.hpp"
-
+extern "C"
+{
+#include "lua-5.1.5/src/lua.h"
+}
 //SourceSDK
 #undef _UNICODE
 
@@ -111,19 +115,19 @@ SourceHook::Impl::CSourceHookImpl g_SourceHook;
 SourceHook::ISourceHook *g_SHPtr = &g_SourceHook;
 int g_PLID = 0;
 CGlobalVars *g_GlobalVars = NULL;
-/*
+
 IVEngineServer *engineServer = NULL;
 IServerGameDLL *engineServerDLL = NULL;
 IGameEventManager2 *gameEventManager = NULL; // game events interface
 IPlayerInfoManager *playerInfoManager = NULL;
 ICvar *g_pCVar = NULL;
-*/
+
 //------------------------------------------------------------------------------
 // Lua Utils
 //------------------------------------------------------------------------------
 
 static void stackDump(lua_State *L) {
-	int i;/*
+	int i;
 	int top = lua_gettop(L);
 	for (i = 1; i <= top; i++) {  // repeat for each level
 		int t = lua_type(L, i);
@@ -148,7 +152,7 @@ static void stackDump(lua_State *L) {
 		}
 		ConColorMsg(Color(255, 0, 0), "  ");  // put a separator
 	}
-	ConColorMsg(Color(255, 0, 0), "\n");  // end the listing */
+	ConColorMsg(Color(255, 0, 0), "\n");  // end the listing 
 }
 
 //------------------------------------------------------------------------------
@@ -229,7 +233,7 @@ std::queue <shared_message, boost::lockfree::fixed_sized<true>, boost::lockfree:
 boost::lockfree::queue <shared_message, boost::lockfree::fixed_sized<true>, boost::lockfree::capacity<64>> printMessages;
 #endif
 
-int shared_print(lua_State* L) {/*
+int shared_print(lua_State* L) {
 	int n = lua_gettop(L);
 	int i;
 	char buffer[512];
@@ -265,7 +269,7 @@ int shared_print(lua_State* L) {/*
 	char tempbuffer[512] = { 0 };
 	strncat(tempbuffer, buffer, (512 - 1) - strlen(buffer));
 	strcpy(msg.message, tempbuffer);
-	printMessages.push(msg);*/
+	printMessages.push(msg);
 	return 0;
 }
 
@@ -275,7 +279,7 @@ int thread_sendmessage_rpc(lua_State* state) {
 
 DLL_EXPORT bool ThreadSendMessage(void* p, int message, const char* system_name, const char* name, double index, double value) { //Нужно попробывать без extern "C"
 	bool successful = false;
-/*
+
 	thread_userdata* userdata = (thread_userdata*)p;
 
 	if (userdata) {
@@ -290,12 +294,12 @@ DLL_EXPORT bool ThreadSendMessage(void* p, int message, const char* system_name,
 		if (userdata->thread_to_sim.push(tmsg)) {
 			successful = true;
 		}
-	}*/
+	}
 	return successful;
 }
 
 int thread_recvmessages(lua_State* state) {
-	/*lua_getglobal(state,"_userdata");
+	lua_getglobal(state,"_userdata");
 	thread_userdata* userdata = (thread_userdata*)lua_touserdata(state,-1);
 	lua_pop(state,1);
 
@@ -314,7 +318,7 @@ int thread_recvmessages(lua_State* state) {
 				});
 		}
 		return 1;
-	}*/
+	}
 	return 0;
 }
 
@@ -338,7 +342,7 @@ DLL_EXPORT int ThreadReadAvailable(void* p) {
 
 DLL_EXPORT bool RnThreadSendMessage(int ent_id, int id, const char* name, double value) {
 	bool successful = true;
-/*
+
 	if (rn_userdata) {
 		rn_thread_msg tmsg;
 		tmsg.ent_id = ent_id;
@@ -352,12 +356,12 @@ DLL_EXPORT bool RnThreadSendMessage(int ent_id, int id, const char* name, double
 	}
 	else {
 		successful = false;
-	}*/
+	}
 	return successful;
 }
 
 int thread_rnrecvmessages(lua_State* state) {
-	/*if (rn_userdata) {
+	if (rn_userdata) {
 		size_t total = rn_userdata->sim_to_thread.read_available();
 		lua_createtable(state, total, 0);
 		for (size_t i = 0; i < total; ++i) {
@@ -371,13 +375,13 @@ int thread_rnrecvmessages(lua_State* state) {
 				});
 		}
 		return 1;
-	}*/
+	}
 	return 0;
 }
 
 // --- v2 Turbostroi Logic
 void threadSimulation(thread_userdata* userdata) {
-	/*lua_State* L = userdata->L;
+	lua_State* L = userdata->L;
         // И для чего????
 	//boost::chrono::process_real_cpu_clock::time_point p = boost::chrono::time_point_cast<boost::chrono::milliseconds>(boost::chrono::process_real_cpu_clock::now());
 
@@ -389,7 +393,7 @@ void threadSimulation(thread_userdata* userdata) {
 			userdata->current_time = target_time;
 			lua_pushnumber(L, Plat_FloatTime());
 			lua_setglobal(L, "CurrentTime");
-
+/*
 			//Execute think
 			lua_getglobal(L,"Think");
 			lua_pushboolean(L, false);
@@ -414,7 +418,7 @@ void threadSimulation(thread_userdata* userdata) {
 				shared_message msg;
 				strcpy(msg.message, err.c_str());
 				printMessages.push(msg);
-			}
+			}*/
 		}
 #ifdef NO_BOOST
                 std::this_thread::sleep_for(chrono::milliseconds(  (int)(1000 / rate)) );
@@ -429,7 +433,7 @@ void threadSimulation(thread_userdata* userdata) {
 	lua_pushstring(L,"[!] Terminating train thread");
 	lua_call(L,1,0);
 	lua_close(L);
-	free(userdata); */
+	free(userdata); 
 }
 
 void threadRailnetworkSimulation(rn_thread_userdata* userdata) {
