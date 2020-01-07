@@ -8,7 +8,7 @@ void console_print(const char *color, const char *format, ... )
     va_start(args, format);
     printf("%s", color);
     vprintf(format, args);
-    printf("%s\n", COLOR_RESET);
+    printf("%s", COLOR_RESET);
     fflush(stdout);
     va_end(args);
     
