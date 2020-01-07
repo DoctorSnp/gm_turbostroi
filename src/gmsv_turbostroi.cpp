@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <deque>
+#include "auxiliary.h"
 
 #ifdef _WIN32
 #include <SDKDDKVer.h> // Set the proper SDK version before including boost/Asio и Асио инклюдит windows.h на линуксе просто асио и все
@@ -67,7 +68,7 @@ int (WINAPIV * __vsnwprintf)(wchar_t *, size_t, const wchar_t*, va_list) = _vsnw
 #include <icvar.h>
 #define GAME_DLL
 #include "../game/server/cbase.h"
-#undef GAME_DLL */
+#undef GAME_DLL 
 #define _UNICODE
 
 #define GARRYSMOD_LUA_SOURCECOMPAT_H
@@ -99,25 +100,31 @@ static void stackDump(lua_State *L) {
 		switch (t) {
 
 		case LUA_TSTRING:  /* strings */
-			ConColorMsg(Color(255, 0, 0), "`%s'", lua_tostring(L, i));
+                        console_print(COLOR_MAGENTA, "`%s'", lua_tostring(L, i));
+                        //ConColorMsg(Color(255, 0, 0), "`%s'", lua_tostring(L, i));
 			break;
 
 		case LUA_TBOOLEAN:  /* booleans */
-			ConColorMsg(Color(255, 0, 0), lua_toboolean(L, i) ? "true" : "false");
+                        console_print(COLOR_MAGENTA, "`%s'", lua_toboolean(L, i) ? "true" : "false" );
+			//ConColorMsg(Color(255, 0, 0), lua_toboolean(L, i) ? "true" : "false");
 			break;
 
 		case LUA_TNUMBER:  /* numbers */
-			ConColorMsg(Color(255, 0, 0), "%g", lua_tonumber(L, i));
+			 console_print(COLOR_MAGENTA, "`%s'", lua_tonumber(L, i));
+                        //ConColorMsg(Color(255, 0, 0), "%g", lua_tonumber(L, i));
 			break;
 
 		default:  /* other values */
-			ConColorMsg(Color(255, 0, 0), "%s", lua_typename(L, t));
+			console_print(COLOR_MAGENTA, "`%s'", lua_typename(L, t));
+                        //ConColorMsg(Color(255, 0, 0), "%s", lua_typename(L, t));
 			break;
 
 		}
-		ConColorMsg(Color(255, 0, 0), "  ");  /* put a separator */
+		console_print(COLOR_MAGENTA, " " ); /* put a separator */
+		//ConColorMsg(Color(255, 0, 0), "  ");  /* put a separator */
 	}
-	ConColorMsg(Color(255, 0, 0), "\n");  /* end the listing */
+	console_print(COLOR_MAGENTA, "\n" ); /* put a separator */
+	//ConColorMsg(Color(255, 0, 0), "\n");  /* end the listing */
 }
 
 //------------------------------------------------------------------------------
@@ -339,7 +346,8 @@ void threadSimulation(thread_userdata* userdata) {
 		//Simulate one step
 		if (userdata->current_time < target_time) {
 			userdata->current_time = target_time;
-			lua_pushnumber(L, Plat_FloatTime());
+			//lua_pushnumber(L, Plat_FloatTime());
+                        lua_pushnumber(L, Plat_FloatTime());
 			lua_setglobal(L, "CurrentTime");
 
 			//Execute think
@@ -355,8 +363,9 @@ void threadSimulation(thread_userdata* userdata) {
 		}
 		else {
 			//Execute think
-			lua_pushnumber(L, Plat_FloatTime());
-			lua_setglobal(L, "CurrentTime");
+			//lua_pushnumber(L, Plat_FloatTime());
+			
+                        lua_setglobal(L, "CurrentTime");
 
 			lua_getglobal(L, "Think");
 			lua_pushboolean(L, true);
