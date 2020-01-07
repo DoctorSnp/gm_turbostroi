@@ -1,38 +1,13 @@
-﻿#include "gmsv_turbostroi.h"
-#include "auxiliary.h"
-
-#include <stdio.h>
+﻿#include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <deque>
-#include <iostream>
-
-#ifdef POSIX
-#include <sched.h>
-#endif
 
 #ifdef _WIN32
 #include <SDKDDKVer.h> // Set the proper SDK version before including boost/Asio и Асио инклюдит windows.h на линуксе просто асио и все
 #endif
 
 #define _SCL_SECURE_NO_WARNINGS
-
-//#define lua_getglobal(L,s)	lua_getfield(L, LUA_GLOBALSINDEX, (s))
-
-/* DISABLING TEST */
-//#define NO_BOOST # на будущее, чтобы буст не требовался
-#ifdef NO_BOOST
-#include <thread>
-#include <chrono>
-#include <atomic>
-#include <map>
-#include <unordered_map>
-#include <queue>
-
-// сторонние зависимости (чтобы без буста)
-#include "spsc_queue.h"
-
-#else
 #include <boost/thread.hpp>
 #include <boost/chrono.hpp>
 #include <boost/atomic.hpp>
@@ -42,7 +17,6 @@
 #include <boost/lockfree/policies.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/unordered_map.hpp>
-#endif
 
 #include "sourcehook_impl.h"
 
@@ -52,7 +26,7 @@ using namespace SourceHook;
 #include <cstdint>
 #define DWORD_PTR uintptr_t
 #endif
-/*
+
 #if defined(_MSC_VER)
     //  Microsoft 
     #define DLL_EXPORT extern "C" __declspec(dllexport)
@@ -67,14 +41,13 @@ using namespace SourceHook;
     #define DLL_IMPORT
     #pragma warning Unknown dynamic link import/export semantics.
 #endif
-*/
+
 extern "C"
 {
 #include "luajit/lua.h"
 #include "luajit/lauxlib.h"
 #include "luajit/lualib.h"    
 }
-
 #undef _UNICODE
 
 #ifdef _WIN32
@@ -84,9 +57,6 @@ int (WINAPIV * __vsnwprintf)(wchar_t *, size_t, const wchar_t*, va_list) = _vsnw
 #define wcsdup _wcsdup
 #endif
 
-#define strdup _strdup
-#define wcsdup _wcsdup 
-
 #include <interface.h>
 #include <eiface.h>
 #include <Color.h>
@@ -94,29 +64,20 @@ int (WINAPIV * __vsnwprintf)(wchar_t *, size_t, const wchar_t*, va_list) = _vsnw
 #include <game/server/iplayerinfo.h>
 #include <iserver.h>
 #include <convar.h>
-#include <icvar.h> 
+#include <icvar.h>
 #define GAME_DLL
 #include "../game/server/cbase.h"
-#undef GAME_DLL
+#undef GAME_DLL */
 #define _UNICODE
 
 #define GARRYSMOD_LUA_SOURCECOMPAT_H
 #include "GarrysMod/Lua/Interface.h"
 using namespace GarrysMod::Lua;
-
 //------------------------------------------------------------------------------
 // SourceSDK
 //------------------------------------------------------------------------------
-
-
-void TurboTest::print()
-{
-    printf("Hello from Turbostroi library !\n");
-}
-
-SourceHook::Impl::CSourceHookImpl g_SourceHook;
-
-SourceHook::ISourceHook *g_SHPtr = &g_SourceHook;
+/* SourceHook::Impl::CSourceHookImpl g_SourceHook;
+SourceHook::ISourceHook *g_SHPtr = &g_SourceHook; */
 int g_PLID = 0;
 CGlobalVars *g_GlobalVars = NULL;
 
@@ -125,7 +86,7 @@ IServerGameDLL *engineServerDLL = NULL;
 IGameEventManager2 *gameEventManager = NULL; // game events interface
 IPlayerInfoManager *playerInfoManager = NULL;
 ICvar *g_pCVar = NULL;
-
+ /**/
 //------------------------------------------------------------------------------
 // Lua Utils
 //------------------------------------------------------------------------------
@@ -133,30 +94,30 @@ ICvar *g_pCVar = NULL;
 static void stackDump(lua_State *L) {
 	int i;
 	int top = lua_gettop(L);
-	for (i = 1; i <= top; i++) {  // repeat for each level
+	for (i = 1; i <= top; i++) {  /* repeat for each level */
 		int t = lua_type(L, i);
 		switch (t) {
 
-		case LUA_TSTRING:  // strings
-			//ConColorMsg(Color(255, 0, 0), "`%s'", lua_tostring(L, i));
+		case LUA_TSTRING:  /* strings */
+			ConColorMsg(Color(255, 0, 0), "`%s'", lua_tostring(L, i));
 			break;
 
-		case LUA_TBOOLEAN:  // booleans
-			//ConColorMsg(Color(255, 0, 0), lua_toboolean(L, i) ? "true" : "false");
+		case LUA_TBOOLEAN:  /* booleans */
+			ConColorMsg(Color(255, 0, 0), lua_toboolean(L, i) ? "true" : "false");
 			break;
 
-		case LUA_TNUMBER:  // numbers
-			//ConColorMsg(Color(255, 0, 0), "%g", lua_tonumber(L, i));
+		case LUA_TNUMBER:  /* numbers */
+			ConColorMsg(Color(255, 0, 0), "%g", lua_tonumber(L, i));
 			break;
 
-		default:  // other values
-			//ConColorMsg(Color(255, 0, 0), "%s", lua_typename(L, t));
+		default:  /* other values */
+			ConColorMsg(Color(255, 0, 0), "%s", lua_typename(L, t));
 			break;
 
 		}
-		//ConColorMsg(Color(255, 0, 0), "  ");  // put a separator
+		ConColorMsg(Color(255, 0, 0), "  ");  /* put a separator */
 	}
-	//ConColorMsg(Color(255, 0, 0), "\n");  // end the listing 
+	ConColorMsg(Color(255, 0, 0), "\n");  /* end the listing */
 }
 
 //------------------------------------------------------------------------------
@@ -170,12 +131,7 @@ char metrostroiSystemsList[BUFFER_SIZE] = { 0 };
 char loadSystemsList[BUFFER_SIZE] = { 0 };
 int SimThreadAffinityMask = 0;
 std::map<int, IServerNetworkable*> trains_pos;
-
-#ifdef NO_BOOST
-std::unordered_map<std::string, std::string> load_files_cache;
-#else
 boost::unordered_map<std::string, std::string> load_files_cache;
-#endif
 
 typedef struct {
 	int message;
@@ -189,12 +145,9 @@ struct thread_userdata {
 	double current_time;
 	lua_State* L;
 	int finished;
-        
-#ifdef NO_BOOST
-        rigtorp::SPSCQueue <thread_msg> thread_to_sim, sim_to_thread;
-#else
+
 	boost::lockfree::spsc_queue<thread_msg> thread_to_sim, sim_to_thread;
-#endif
+
 	thread_userdata() : thread_to_sim(1024), sim_to_thread(1024) //256
 	{
 	}
@@ -211,12 +164,9 @@ struct rn_thread_userdata {
 	double current_time;
 	lua_State* L;
 	int finished;
-#ifdef NO_BOOST
-	rigtorp::SPSCQueue <rn_thread_msg> thread_to_sim, sim_to_thread;
-#else
-        boost::lockfree::spsc_queue<rn_thread_msg> thread_to_sim, sim_to_thread;
-#endif
-	
+
+	boost::lockfree::spsc_queue<rn_thread_msg> thread_to_sim, sim_to_thread;
+
 	rn_thread_userdata() : thread_to_sim(256), sim_to_thread(256) //256
 	{
 	}
@@ -231,12 +181,7 @@ rn_thread_userdata* rn_userdata = NULL;
 // Turbostroi sim thread API
 //------------------------------------------------------------------------------
 
-#ifdef NO_BOOST
-std::queue <shared_message, boost::lockfree::fixed_sized<true>, boost::lockfree::capacity<64>> printMessages;
-#else
 boost::lockfree::queue <shared_message, boost::lockfree::fixed_sized<true>, boost::lockfree::capacity<64>> printMessages;
-#endif
-
 int shared_print(lua_State* L) {
 	int n = lua_gettop(L);
 	int i;
@@ -386,8 +331,7 @@ int thread_rnrecvmessages(lua_State* state) {
 // --- v2 Turbostroi Logic
 void threadSimulation(thread_userdata* userdata) {
 	lua_State* L = userdata->L;
-        // И для чего????
-	//boost::chrono::process_real_cpu_clock::time_point p = boost::chrono::time_point_cast<boost::chrono::milliseconds>(boost::chrono::process_real_cpu_clock::now());
+	boost::chrono::process_real_cpu_clock::time_point p = boost::chrono::time_point_cast<boost::chrono::milliseconds>(boost::chrono::process_real_cpu_clock::now());
 
 	while (userdata && !userdata->finished) {
 		lua_settop(L,0);
@@ -395,7 +339,7 @@ void threadSimulation(thread_userdata* userdata) {
 		//Simulate one step
 		if (userdata->current_time < target_time) {
 			userdata->current_time = target_time;
-			//lua_pushnumber(L, Plat_FloatTime());
+			lua_pushnumber(L, Plat_FloatTime());
 			lua_setglobal(L, "CurrentTime");
 
 			//Execute think
@@ -411,7 +355,7 @@ void threadSimulation(thread_userdata* userdata) {
 		}
 		else {
 			//Execute think
-			//lua_pushnumber(L, Plat_FloatTime());
+			lua_pushnumber(L, Plat_FloatTime());
 			lua_setglobal(L, "CurrentTime");
 
 			lua_getglobal(L, "Think");
@@ -424,12 +368,8 @@ void threadSimulation(thread_userdata* userdata) {
 				printMessages.push(msg);
 			}
 		}
-#ifdef NO_BOOST
-                std::this_thread::sleep_for(chrono::milliseconds(  (int)(1000 / rate)) );
-#else
+
 		boost::this_thread::sleep_for(boost::chrono::milliseconds((int)(1000 / rate)));
-#endif
-               
 	}
 
 	//Release resources
@@ -437,16 +377,13 @@ void threadSimulation(thread_userdata* userdata) {
 	lua_pushstring(L,"[!] Terminating train thread");
 	lua_call(L,1,0);
 	lua_close(L);
-	free(userdata); 
+	free(userdata);
 }
 
-
 void threadRailnetworkSimulation(rn_thread_userdata* userdata) {
-/*	lua_State* L = userdata->L;
-#ifndef NO_BOOST
+	lua_State* L = userdata->L;
 	boost::chrono::process_real_cpu_clock::time_point p = boost::chrono::process_real_cpu_clock::now();
-#endif
-        
+
 	while (userdata && !userdata->finished) {
 		lua_settop(L,0);
 
@@ -457,8 +394,7 @@ void threadRailnetworkSimulation(rn_thread_userdata* userdata) {
 			lua_setglobal(L,"CurrentTime");
 			
 			lua_newtable(L);
-			
-                        for (auto var: trains_pos)
+			for (auto var : trains_pos)
 			{
 				lua_createtable(L, 0, 3);
 				float* pos = var.second->GetPVSInfo()->m_vCenter;
@@ -479,13 +415,8 @@ void threadRailnetworkSimulation(rn_thread_userdata* userdata) {
 				printMessages.push(msg);
 			}
 		}
-#ifdef NO_BOOST
-                std::this_thread::sleep_for(chrono::milliseconds(  (int)(1000 / rate)) );
-#else
 		p += boost::chrono::milliseconds((int)(1000 / rate));
 		boost::this_thread::sleep_until(p);
-#endif
-
 	}
 
 	//Release resources
@@ -494,7 +425,6 @@ void threadRailnetworkSimulation(rn_thread_userdata* userdata) {
 	lua_call(L,1,0);
 	lua_close(L);
 	free(userdata);
-*/	
 }
 
 
@@ -688,20 +618,17 @@ LUA_FUNCTION( API_InitializeTrain )
 
 	//Create thread for simulation
 	boost::thread thread(threadSimulation, userdata);
-	#ifdef _WIN32
-        if (SimThreadAffinityMask) {
+/* 	if (SimThreadAffinityMask) {
 		if (!SetThreadAffinityMask(thread.native_handle(), static_cast<DWORD_PTR>(SimThreadAffinityMask))) {
 			ConColorMsg(Color(255,0,0), "Turbostroi: SetSTAffinityMask failed on train thread! \n");
 		}
-	}
-        #endif
+	} */
 	return 0;
 }
 
 LUA_FUNCTION( API_DeinitializeTrain ) 
 {
 	//RailNetwork
-    
 	CBaseHandle* EntHandle;
 	//Get entity index
 	EntHandle = (CBaseHandle*)LUA->GetUserType<CBaseHandle>(1, Type::ENTITY);
@@ -773,17 +700,11 @@ int API_InitializeRailnetwork(ILuaBase* LUA) {
 
 	//Create thread for simulation
 	boost::thread thread(threadRailnetworkSimulation, userdata);
-        #ifdef POSIX
-            printf("Please, make  setaffinit function for thread optimizing\n");
-            //int sched_setaffinity(pid_t pid, unsigned int len, unsigned long *mask);
-        #else
-        if (SimThreadAffinityMask) {
+/* 	if (SimThreadAffinityMask) {
 		if (!SetThreadAffinityMask(thread.native_handle(), static_cast<DWORD_PTR>(SimThreadAffinityMask))) {
 			ConColorMsg(Color(255, 0, 0), "Turbostroi: SetSTAffinityMask failed on rail network thread! \n");
 		}
-	}
-        #endif
-	
+	} */
 	return 0;
 }
 
@@ -807,7 +728,6 @@ LUA_FUNCTION( API_LoadSystem )
 
 LUA_FUNCTION( API_RegisterSystem ) 
 {
-    
 	if (LUA->GetString(1) && LUA->GetString(2)) {
 		char msg[8192] = { 0 };
 		LUA->PushSpecial(GarrysMod::Lua::SPECIAL_GLOB);
@@ -823,14 +743,12 @@ LUA_FUNCTION( API_RegisterSystem )
 		strncat(metrostroiSystemsList,LUA->GetString(2),131071);
 		strncat(metrostroiSystemsList,"\n",131071);
 	}
-	
 	return 0;
 }
 
 LUA_FUNCTION( API_SendMessage ) 
 {
 	bool successful = true;
-        
 	LUA->CheckType(2,Type::NUMBER);
 	LUA->CheckType(3,Type::STRING);
 	LUA->CheckType(4,Type::STRING);
@@ -858,13 +776,11 @@ LUA_FUNCTION( API_SendMessage )
 	}
 	LUA->PushBool(successful);
 	return 1;
-      
 }
 
 LUA_FUNCTION( API_RnSendMessage ) 
 {
-        bool successful = true;
-        
+	bool successful = true;
 	LUA->CheckType(2, Type::NUMBER);
 	LUA->CheckType(3, Type::NUMBER);
 	LUA->CheckType(4, Type::STRING);
@@ -885,13 +801,11 @@ LUA_FUNCTION( API_RnSendMessage )
 		successful = false;
 	}
 	LUA->PushBool(successful);
-	
 	return 1;
 }
 
 LUA_FUNCTION( API_RecvMessages ) 
 {
-        
 	LUA->GetField(1,"_sim_userdata");
 	thread_userdata* userdata = LUA->GetUserType<thread_userdata>(-1, 1);
 	LUA->Pop();
@@ -912,14 +826,12 @@ LUA_FUNCTION( API_RecvMessages )
 		}
 		return 1;
 	}
-	
 	return 0;
 }
 
 LUA_FUNCTION( API_RecvMessage ) 
 {
-	
-        LUA->GetField(1, "_sim_userdata");
+	LUA->GetField(1, "_sim_userdata");
 	thread_userdata* userdata = LUA->GetUserType<thread_userdata>(-1, 1);
 	LUA->Pop();
 
@@ -934,13 +846,11 @@ LUA_FUNCTION( API_RecvMessage )
 			return 5;
 		}
 	}
-	
 	return 0;
 }
 
 LUA_FUNCTION( API_RnRecvMessages ) 
 {
-        
 	if (rn_userdata) {
 		LUA->CreateTable();
 		for (size_t i = 0; i < rn_userdata->thread_to_sim.read_available(); ++i) {
@@ -956,7 +866,6 @@ LUA_FUNCTION( API_RnRecvMessages )
 		}
 		return 1;
 	}
-	
 	return 0;
 }
 
@@ -976,37 +885,19 @@ LUA_FUNCTION( API_SetSimulationFPS )
 	return 0;
 }
 
-#ifdef POSIX
 LUA_FUNCTION( API_SetMTAffinityMask ) 
 {
-	LUA->CheckType(1, Type::NUMBER);
+/* 	LUA->CheckType(1, Type::NUMBER);
 	int MTAffinityMask = (int)LUA->GetNumber(1);
-
-#ifdef POSIX
-        printf( "%d Turbostroi: Main Thread Running on CPU %d  %d\n",COLOR_MAGENTA,  sched_getcpu,  COLOR_RESET );
-#else
-        ConColorMsg(Color(0, 255, 0), "Turbostroi: Main Thread Running on CPU%d \n", sched_getcpu );
-#endif
-        printf("Please, make  setaffinit function for thread optimizing\n");
-	return 0;
-}
-#else
-LUA_FUNCTION( API_SetMTAffinityMask ) 
-{
-	LUA->CheckType(1, Type::NUMBER);
-	int MTAffinityMask = (int)LUA->GetNumber(1);
-	//ConColorMsg(Color(0, 255, 0), "Turbostroi: Main Thread Running on CPU%i \n", GetCurrentProcessorNumber());
+	ConColorMsg(Color(0, 255, 0), "Turbostroi: Main Thread Running on CPU%i \n", GetCurrentProcessorNumber());
 	if (!SetThreadAffinityMask(GetCurrentThread(), static_cast<DWORD_PTR>(MTAffinityMask))) {
-		//ConColorMsg(Color(255, 0, 0), "Turbostroi: SetMTAffinityMask failed! \n");
+		ConColorMsg(Color(255, 0, 0), "Turbostroi: SetMTAffinityMask failed! \n");
 	}
 	else {
-		//ConColorMsg(Color(0, 255, 0), "Turbostroi: Changed to CPU%i \n", GetCurrentProcessorNumber());
-	}
+		ConColorMsg(Color(0, 255, 0), "Turbostroi: Changed to CPU%i \n", GetCurrentProcessorNumber());
+	} */
 	return 0;
 }
-#endif
-
-
 
 LUA_FUNCTION( API_SetSTAffinityMask ) 
 {
@@ -1015,78 +906,133 @@ LUA_FUNCTION( API_SetSTAffinityMask )
 	return 0;
 }
 
-LUA_FUNCTION( API_StartRailNetwork ) 
+/* LUA_FUNCTION( API_StartRailNetwork ) 
 {
 	if (rn_userdata) {
 		API_DeinitializeRailnetwork( LUA );
 	}
 	API_InitializeRailnetwork( LUA );
 	return 0;
-}
+} */
 
 //------------------------------------------------------------------------------
 // Initialization SourceSDK
 //------------------------------------------------------------------------------
-
-
-SH_DECL_HOOK1_void(IServerGameDLL, Think, SH_NOATTRIB, 0, bool);
-static void Think_handler(bool finalTick) {
-    
+//SH_DECL_HOOK1_void(IServerGameDLL, Think, SH_NOATTRIB, 0, bool);
+LUA_FUNCTION (Think_handler)
+{
 	target_time = g_GlobalVars->curtime;
 	shared_message msg;
 	if (printMessages.pop(msg)) {
 		//ConColorMsg(Color(255, 0, 255), msg.message);
+		LUA->PushSpecial(GarrysMod::Lua::SPECIAL_GLOB);
+		LUA->GetField(-1, "MsgC");
+		LUA->GetField(-2, "Color");
+		LUA->PushNumber(255);
+		LUA->PushNumber(0);
+		LUA->PushNumber(255);
+		LUA->Call(3, 1);
+		LUA->PushString(msg.message);
+		LUA->Call(2, 0);
+		LUA->Pop();
 	}
 }
 
-void InstallHooks() {
-	//ConColorMsg(Color(0, 255, 0), "Turbostroi: Installing hooks!\n");
+/* void InstallHooks() {
+	ConColorMsg(Color(0, 255, 0), "Turbostroi: Installing hooks!\n");
 	SH_ADD_HOOK_STATICFUNC(IServerGameDLL, Think, engineServerDLL, Think_handler, false);
-}
+} */
 
-void ClearLoadCache(const CCommand &command) {
-    
+LUA_FUNCTION(ClearLoadCache)
+{
 	load_files_cache.clear();
-	//ConColorMsg(Color(0, 255, 0), "Turbostroi: Cache cleared!\n");*/
+	//ConColorMsg(Color(0, 255, 0), "Turbostroi: Cache cleared!\n");
+	LUA->PushSpecial(GarrysMod::Lua::SPECIAL_GLOB);
+	LUA->GetField(-1, "MsgC");
+	LUA->GetField(-2, "Color");
+	LUA->PushNumber(0);
+	LUA->PushNumber(255);
+	LUA->PushNumber(0);
+	LUA->Call(3, 1);
+	LUA->PushString("Turbostroi: Cache cleared!");
+	LUA->Call(2, 0);
+	LUA->Pop();
 }
 
-void InitInterfaces() {
-	/*
-        Sys_LoadInterface("engine", INTERFACEVERSION_VENGINESERVER, NULL, reinterpret_cast<void**>(&engineServer));
+/*void InitInterfaces() {
+	//Sys_LoadInterface("engine", INTERFACEVERSION_VENGINESERVER, NULL, reinterpret_cast<void**>(&engineServer));
 	if (!engineServer)
 	{ 
 		//ConColorMsg(Color(255, 0, 0), "Turbostroi: Unable to load Engine Interface!\n");
+	LUA->PushSpecial(GarrysMod::Lua::SPECIAL_GLOB);
+	LUA->GetField(-1, "MsgC");
+	LUA->GetField(-2, "Color");
+	LUA->PushNumber(255);
+	LUA->PushNumber(0);
+	LUA->PushNumber(0);
+	LUA->Call(3, 1);
+	LUA->PushString("Turbostroi: Unable to load Engine Interface!");
+	LUA->Call(2, 0);
+	LUA->Pop();
 	}
-	Sys_LoadInterface("server", INTERFACEVERSION_SERVERGAMEDLL, NULL, reinterpret_cast<void**>(&engineServerDLL));
+	//Sys_LoadInterface("server", INTERFACEVERSION_SERVERGAMEDLL, NULL, reinterpret_cast<void**>(&engineServerDLL));
 	if (!engineServerDLL)
 	{
 		//ConColorMsg(Color(255, 0, 0), "Turbostroi: Unable to load SGameDLL Interface!\n");
+	LUA->PushSpecial(GarrysMod::Lua::SPECIAL_GLOB);
+	LUA->GetField(-1, "MsgC");
+	LUA->GetField(-2, "Color");
+	LUA->PushNumber(255);
+	LUA->PushNumber(0);
+	LUA->PushNumber(0);
+	LUA->Call(3, 1);
+	LUA->PushString("Turbostroi: Unable to load SGameDLL Interface!");
+	LUA->Call(2, 0);
+	LUA->Pop();
 	}
-	Sys_LoadInterface("server", INTERFACEVERSION_PLAYERINFOMANAGER, NULL, reinterpret_cast<void**>(&playerInfoManager));
+	//Sys_LoadInterface("server", INTERFACEVERSION_PLAYERINFOMANAGER, NULL, reinterpret_cast<void**>(&playerInfoManager));
 	if (!playerInfoManager)
 	{
 		//ConColorMsg(Color(255, 0, 0), "Turbostroi: Unable to load PlayerInfoManager Interface!\n");
+	LUA->PushSpecial(GarrysMod::Lua::SPECIAL_GLOB);
+	LUA->GetField(-1, "MsgC");
+	LUA->GetField(-2, "Color");
+	LUA->PushNumber(255);
+	LUA->PushNumber(0);
+	LUA->PushNumber(0);
+	LUA->Call(3, 1);
+	LUA->PushString("Turbostroi: Unable to load PlayerInfoManager Interface!");
+	LUA->Call(2, 0);
+	LUA->Pop();
 	}
-	Sys_LoadInterface("vstdlib", CVAR_INTERFACE_VERSION, NULL, reinterpret_cast<void**>(&g_pCVar));
+	//Sys_LoadInterface("vstdlib", CVAR_INTERFACE_VERSION, NULL, reinterpret_cast<void**>(&g_pCVar));
 	if (!g_pCVar)
 	{
 		//ConColorMsg(Color(255, 0, 0), "Turbostroi: Unable to load CVAR Interface!\n");
+	LUA->PushSpecial(GarrysMod::Lua::SPECIAL_GLOB);
+	LUA->GetField(-1, "MsgC");
+	LUA->GetField(-2, "Color");
+	LUA->PushNumber(255);
+	LUA->PushNumber(0);
+	LUA->PushNumber(0);
+	LUA->Call(3, 1);
+	LUA->PushString("Turbostroi: Unable to load CVAR Interface!");
+	LUA->Call(2, 0);
+	LUA->Pop();
 	}
 
 	if (playerInfoManager) g_GlobalVars = playerInfoManager->GetGlobalVars();
-	InstallHooks();
-*/
-	//g_pCVar->RegisterConCommand(new ConCommand("turbostroi_clear_cache", ClearLoadCache, "Clear loaded files cache."));
-}
+	//InstallHooks();
+
+	g_pCVar->RegisterConCommand(new ConCommand("turbostroi_clear_cache", ClearLoadCache, "Clear loaded files cache."));
+}*/
 
 //------------------------------------------------------------------------------
 // Initialization
 //------------------------------------------------------------------------------
 GMOD_MODULE_OPEN() {
-	
-        InitInterfaces();
-       // console_print( COLOR_MAGENTA, " Opened turbostroy ver:  %s" , PROJECT_VER );
-        //printf( "%s Opened turbostroy  ver: %s %s\n", COLOR_MAGENTA,  version_str, COLOR_RESET);
+	//InitInterfaces();
+
 	//Check whether being ran on server
 	LUA->PushSpecial(GarrysMod::Lua::SPECIAL_GLOB);
 	LUA->GetField(-1,"SERVER");
@@ -1114,8 +1060,8 @@ GMOD_MODULE_OPEN() {
 	LUA->SetField(-2,"InitializeTrain");
 	LUA->PushCFunction(API_DeinitializeTrain);
 	LUA->SetField(-2,"DeinitializeTrain");
-	LUA->PushCFunction(API_StartRailNetwork);
-	LUA->SetField(-2,"StartRailNetwork");
+/* 	LUA->PushCFunction(API_StartRailNetwork);
+	LUA->SetField(-2,"StartRailNetwork"); */
 	//LUA->PushCFunction(API_Think); // depricated. using engine think hook
 	//LUA->SetField(-2,"Think");
 	LUA->PushCFunction(API_SendMessage);
@@ -1141,6 +1087,8 @@ GMOD_MODULE_OPEN() {
 	LUA->SetField(-2,"SetSimulationFPS");
 	//LUA->PushCFunction(API_SetTargetTime); //deprecated. using engine think hook
 	//LUA->SetField(-2,"SetTargetTime");
+	LUA->PushCFunction(Think_handler);
+	LUA->SetField(-2, "Think_handler");
 	LUA->PushCFunction(API_SetMTAffinityMask);
 	LUA->SetField(-2, "SetMTAffinityMask");
 	LUA->PushCFunction(API_SetSTAffinityMask);
@@ -1163,8 +1111,18 @@ GMOD_MODULE_OPEN() {
 
 	if (!printMessages.is_lock_free()) {
 		//ConColorMsg(Color(255, 0, 0), "Turbostroi: Not fully supported! \n");
+	LUA->PushSpecial(GarrysMod::Lua::SPECIAL_GLOB);
+	LUA->GetField(-1, "MsgC");
+	LUA->GetField(-2, "Color");
+	LUA->PushNumber(255);
+	LUA->PushNumber(0);
+	LUA->PushNumber(0);
+	LUA->Call(3, 1);
+	LUA->PushString("Turbostroi: Not fully supported!");
+	LUA->Call(2, 0);
+	LUA->Pop();
 	}
-        
+
 	return 0;
 }
 
@@ -1172,9 +1130,5 @@ GMOD_MODULE_OPEN() {
 // Deinitialization
 //------------------------------------------------------------------------------
 GMOD_MODULE_CLOSE() {
-	ConCommand* cmd = g_pCVar->FindCommand("turbostroi_clear_cache");
-	if (cmd != nullptr) {
-		g_pCVar->UnregisterConCommand(cmd);
-	}
 	return 0;
 }
