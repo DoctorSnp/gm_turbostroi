@@ -1085,8 +1085,8 @@ void InitInterfaces() {
 GMOD_MODULE_OPEN() {
 	
         InitInterfaces();
-        console_print( COLOR_MAGENTA, " ====++ This is text from lib ++====");
-       // printf( "%s ====++ This is text from lib ++====%s\n", COLOR_MAGENTA, COLOR_RESET);
+       // console_print( COLOR_MAGENTA, " Opened turbostroy ver:  %s" , PROJECT_VER );
+        //printf( "%s Opened turbostroy  ver: %s %s\n", COLOR_MAGENTA,  version_str, COLOR_RESET);
 	//Check whether being ran on server
 	LUA->PushSpecial(GarrysMod::Lua::SPECIAL_GLOB);
 	LUA->GetField(-1,"SERVER");
