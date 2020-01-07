@@ -16,17 +16,18 @@ file( GLOB GLOB_LIB_SRC_LIST
 
 file( GLOB GLOB_LIB_LUA
     "depends/lua-5.1.5/src/*.c"
+    #"depends/luajit/src/*.c"
     )
     
 file( GLOB GLOB_SOURCESDK
     #"external/sourcesdk-minimal/game/shared/*.h"
-    "external/sourcesdk-minimal/game/shared/*.cpp"
+    #"external/sourcesdk-minimal/game/shared/*.cpp"
     #"external/sourcesdk-minimal/game/server/*.h"
-    "external/sourcesdk-minimal/game/server/*.cpp"
+    #"external/sourcesdk-minimal/game/server/*.cpp"
     #"external/sourcesdk-minimal/public/shaderapi/*.h"
-    "external/sourcesdk-minimal/public/shaderapi/*.cpp"
+   # "external/sourcesdk-minimal/public/shaderapi/*.cpp"
     #"external/sourcesdk-minimal/public/tier0/*.h"
-    "external/sourcesdk-minimal/public/tier0/memoverride.cpp"
+    #"external/sourcesdk-minimal/public/tier0/memoverride.cpp"
     
     #"external/sourcesdk-minimal/public/tier1/*.h"
     "external/sourcesdk-minimal/tier1/*.h"
@@ -37,22 +38,23 @@ file( GLOB GLOB_SOURCESDK
 
 set (LIB_SRC 
     src/gmsv_turbostroi.cpp
-    depends/lua-5.1.5/src/lapi.c
+    src/auxiliary.cpp
+    #external/sourcesdk-minimal/tier1/interface.cpp
+    #depends/lua-5.1.5/src/lapi.c
     ${GLOB_LIB_SRC_LIST}
-    ${GLOB_LIB_LUA}
+    #${GLOB_LIB_LUA}
     #${GLOB_SOURCESDK}
-    
 )
 
 add_definitions(-DGNUC  -DPOSIX  -D_LINUX -DLINUX )
 
 set(CMAKE_SYSTEM_PROCESSOR "i686")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m32 -Wall -fPIC -O2" CACHE STRING "c++ flags")
-set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS} -m32 -Wall -fPIC -O2" CACHE STRING "c flags")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m32 -Wall -fPIC -O2 " CACHE STRING "c++ flags")
+set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS} -m32 -Wall -fPIC -O2 " CACHE STRING "c flags")
 
-#find_library( BOOST32_SYSTEM  libboost_system.a PATHS depends/boost_1_71_0/stage/lib/ )
-#find_library( BOOST32_THREAD libboost_thread.a PATHS   depends/boost_1_71_0/stage/lib/ )
-#find_library( BOOST32_CHRONO  libboost_chrono.a PATHS depends/boost_1_71_0/stage1/lib/)
+#find_library( BOOST32_SYSTEM  libboost_system.a PATHS depends/boost_1_72_0/stage/lib/ )
+#find_library( BOOST32_THREAD libboost_thread.a PATHS   depends/boost_1_72_0/stage/lib/ )
+#find_library( BOOST32_CHRONO  libboost_chrono.a PATHS depends/boost_1_72_0/stage1/lib/)
 
 add_library ( 
 ${PROJECT_NAME} SHARED  ${LIB_SRC} 
@@ -80,14 +82,15 @@ target_include_directories(
 )
 
 # требуем от gcc генерировать 32битный код даже на 64 битном линуксе
-set_target_properties(${PROJECT_NAME} PROPERTIES COMPILE_FLAGS "-m32" LINK_FLAGS "-m32 -z defs" )
+set_target_properties(${PROJECT_NAME} PROPERTIES COMPILE_FLAGS "-m32" LINK_FLAGS "-ldl -lpthread -m32 -z defs" ) #-z defs
 set_target_properties(${PROJECT_NAME} PROPERTIES  VERSION ${PROJECT_VERSION})
 
 #find_package(BOOST REQUIRED COMPONENTS system thread chrono)
 
 #target_link_libraries(${PROJECT_NAME} /usr/lib32/libpthread.a)
-target_link_libraries(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/depends/boost_1_71_0/stage/lib/libboost_system.a )
-target_link_libraries(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/depends/boost_1_71_0/stage/lib/libboost_thread.a )
-#target_link_libraries(${PROJECT_NAME}  PRIVATE ${PROJECT_SOURCE_DIR}/depends/boost_1_71_0/stage/lib/libboost_chrono.a )
-#target_link_libraries(${PROJECT_NAME}  PRIVATE ${PROJECT_SOURCE_DIR}/depends/boost_1_71_0/stage/lib/libboost_date_time.a )
-#target_link_libraries(${PROJECT_NAME}  PRIVATE ${PROJECT_SOURCE_DIR}/depends/boost_1_71_0/stage/lib/libboost_atomic.a )
+target_link_libraries(${PROJECT_NAME}  PRIVATE ${PROJECT_SOURCE_DIR}/bin_libs/liblua5.1.5.a)
+target_link_libraries(${PROJECT_NAME}  PRIVATE ${PROJECT_SOURCE_DIR}/depends/boost_1_72_0/stage/lib/libboost_system.a )
+target_link_libraries(${PROJECT_NAME}  PRIVATE ${PROJECT_SOURCE_DIR}/depends/boost_1_72_0/stage/lib/libboost_thread.a )
+target_link_libraries(${PROJECT_NAME}  PRIVATE ${PROJECT_SOURCE_DIR}/depends/boost_1_72_0/stage/lib/libboost_chrono.a )
+target_link_libraries(${PROJECT_NAME}  PRIVATE ${PROJECT_SOURCE_DIR}/depends/boost_1_72_0/stage/lib/libboost_date_time.a )
+target_link_libraries(${PROJECT_NAME}  PRIVATE ${PROJECT_SOURCE_DIR}/depends/boost_1_72_0/stage/lib/libboost_atomic.a )

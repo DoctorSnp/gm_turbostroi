@@ -1,8 +1,6 @@
 ﻿#ifndef __TURBOSTROI_TEST_H__
 #define __TURBOSTROI_TEST_H__
 
-//#include "luajit/lua.h"
-
 class TurboTest
 {
 public:
