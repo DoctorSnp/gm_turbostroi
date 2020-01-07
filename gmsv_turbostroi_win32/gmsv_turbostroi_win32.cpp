@@ -77,6 +77,8 @@ using namespace GarrysMod::Lua;
 SourceHook::ISourceHook *g_SHPtr = &g_SourceHook; */
 int g_PLID = 0;
 //CGlobalVars *g_GlobalVars = NULL;
+string _mapname;
+double _currenttime;
 
 /* IVEngineServer *engineServer = NULL;
 IServerGameDLL *engineServerDLL = NULL;
@@ -88,34 +90,34 @@ ICvar *g_pCVar = NULL;
 // Lua Utils
 //------------------------------------------------------------------------------
 
-static void stackDump(lua_State *L) {
-	int i;
-	int top = lua_gettop(L);
-	for (i = 1; i <= top; i++) {  /* repeat for each level */
-		int t = lua_type(L, i);
-		switch (t) {
-
-		case LUA_TSTRING:  /* strings */
-			ConColorMsg(Color(255, 0, 0), "`%s'", lua_tostring(L, i));
-			break;
-
-		case LUA_TBOOLEAN:  /* booleans */
-			ConColorMsg(Color(255, 0, 0), lua_toboolean(L, i) ? "true" : "false");
-			break;
-
-		case LUA_TNUMBER:  /* numbers */
-			ConColorMsg(Color(255, 0, 0), "%g", lua_tonumber(L, i));
-			break;
-
-		default:  /* other values */
-			ConColorMsg(Color(255, 0, 0), "%s", lua_typename(L, t));
-			break;
-
-		}
-		ConColorMsg(Color(255, 0, 0), "  ");  /* put a separator */
-	}
-	ConColorMsg(Color(255, 0, 0), "\n");  /* end the listing */
-}
+//static void stackDump(lua_State *L) {
+//	int i;
+//	int top = lua_gettop(L);
+//	for (i = 1; i <= top; i++) {  /* repeat for each level */
+//		int t = lua_type(L, i);
+//		switch (t) {
+//
+//		case LUA_TSTRING:  /* strings */
+//			ConColorMsg(Color(255, 0, 0), "`%s'", lua_tostring(L, i));
+//			break;
+//
+//		case LUA_TBOOLEAN:  /* booleans */
+//			ConColorMsg(Color(255, 0, 0), lua_toboolean(L, i) ? "true" : "false");
+//			break;
+//
+//		case LUA_TNUMBER:  /* numbers */
+//			ConColorMsg(Color(255, 0, 0), "%g", lua_tonumber(L, i));
+//			break;
+//
+//		default:  /* other values */
+//			ConColorMsg(Color(255, 0, 0), "%s", lua_typename(L, t));
+//			break;
+//
+//		}
+//		ConColorMsg(Color(255, 0, 0), "  ");  /* put a separator */
+//	}
+//	ConColorMsg(Color(255, 0, 0), "\n");  /* end the listing */
+//}
 
 //------------------------------------------------------------------------------
 // Shared thread printing stuff
@@ -536,6 +538,18 @@ void load(GarrysMod::Lua::ILuaBase* LUA, lua_State* L, char* filename, char* pat
 
 LUA_FUNCTION( API_InitializeTrain ) 
 {
+	//initialize mapname and curtime
+	LUA->PushSpecial(SPECIAL_GLOB);
+	LUA->GetField(-1, "Turbostroi_vars");
+	LUA->GetField(-1, "currenttime");
+	LUA->CheckType(-1, GarrysMod::Lua::Type::NUMBER);
+	_currenttime = LUA->GetNumber(-1);
+	LUA->Pop(1);
+	LUA->GetField(-1, "mapname");
+	LUA->CheckType(-1, GarrysMod::Lua::Type::STRING);
+	_mapname = LUA->GetString(-1);
+	LUA->Pop();
+	
 	CBaseHandle* EntHandle;
 	IServerNetworkable* Entity;
 	//Get entity index
@@ -655,10 +669,10 @@ int API_InitializeRailnetwork(ILuaBase* LUA) {
 	double curtime = LUA->GetNumber(-1);
 	LUA->Pop(); //Curtime
 
-	if (g_GlobalVars) {
-		std::sprintf(path_track, "metrostroi_data/track_%s.txt", g_GlobalVars->mapname.ToCStr());
-		std::sprintf(path_signs, "metrostroi_data/signs_%s.txt", g_GlobalVars->mapname.ToCStr());
-		std::sprintf(path_sched, "metrostroi_data/sched_%s.txt", g_GlobalVars->mapname.ToCStr());
+	if (_currenttime && _mapname) {
+		std::sprintf(path_track, "metrostroi_data/track_%s.txt", _mapname.c_str());
+		std::sprintf(path_signs, "metrostroi_data/signs_%s.txt", _mapname.c_str());
+		std::sprintf(path_sched, "metrostroi_data/sched_%s.txt", _mapname.c_str());
 	}
 	else {
 		LUA->GetField(-1, "game");
@@ -918,7 +932,7 @@ LUA_FUNCTION( API_SetSTAffinityMask )
 //SH_DECL_HOOK1_void(IServerGameDLL, Think, SH_NOATTRIB, 0, bool);
 LUA_FUNCTION (Think_handler)
 {
-	target_time = g_GlobalVars->curtime;
+	target_time = _currenttime;
 	shared_message msg;
 	if (printMessages.pop(msg)) {
 		//ConColorMsg(Color(255, 0, 255), msg.message);
