@@ -33,6 +33,7 @@ file( GLOB GLOB_SOURCESDK
 set (LIB_SRC 
     src/gmsv_turbostroi.cpp
     src/auxiliary.cpp
+	src/from_source_sdk.cpp
     ${GLOB_LIB_SRC_LIST}
     #${GLOB_SOURCESDK}
 )

@@ -2,7 +2,9 @@
 #include <string.h>
 #include <stdlib.h>
 #include <deque>
+
 #include "auxiliary.h"
+#include "from_source_sdk.h"
 
 #ifdef _WIN32
 #include <SDKDDKVer.h> // Set the proper SDK version before including boost/Asio и Асио инклюдит windows.h на линуксе просто асио и все
@@ -52,20 +54,14 @@ extern "C"
 #undef _UNICODE
 
 #ifdef _WIN32
+
 int (WINAPIV * __vsnprintf)(char *, size_t, const char*, va_list) = _vsnprintf;
 int (WINAPIV * __vsnwprintf)(wchar_t *, size_t, const wchar_t*, va_list) = _vsnwprintf;
 #define strdup _strdup
 #define wcsdup _wcsdup
+
 #endif
 
-#include <interface.h>
-#include <eiface.h>
-#include <Color.h>
-#include <dbg.h>
-#include <game/server/iplayerinfo.h>
-#include <iserver.h>
-#include <convar.h>
-#include <icvar.h>
 #define GAME_DLL
 #include "../game/server/cbase.h"
 #undef GAME_DLL 
@@ -77,8 +73,8 @@ using namespace GarrysMod::Lua;
 //------------------------------------------------------------------------------
 // SourceSDK
 //------------------------------------------------------------------------------
-/* SourceHook::Impl::CSourceHookImpl g_SourceHook;
-SourceHook::ISourceHook *g_SHPtr = &g_SourceHook; */
+SourceHook::Impl::CSourceHookImpl g_SourceHook;
+SourceHook::ISourceHook *g_SHPtr = &g_SourceHook;
 int g_PLID = 0;
 CGlobalVars *g_GlobalVars = NULL;
 
@@ -87,6 +83,8 @@ IServerGameDLL *engineServerDLL = NULL;
 IGameEventManager2 *gameEventManager = NULL; // game events interface
 IPlayerInfoManager *playerInfoManager = NULL;
 ICvar *g_pCVar = NULL;
+
+
  /**/
 //------------------------------------------------------------------------------
 // Lua Utils
@@ -100,31 +98,25 @@ static void stackDump(lua_State *L) {
 		switch (t) {
 
 		case LUA_TSTRING:  /* strings */
-                        console_print(COLOR_MAGENTA, "`%s'", lua_tostring(L, i));
-                        //ConColorMsg(Color(255, 0, 0), "`%s'", lua_tostring(L, i));
+                        console_print(TURBO_COLOR_MAGENTA, "`%s'", lua_tostring(L, i));
 			break;
 
 		case LUA_TBOOLEAN:  /* booleans */
-                        console_print(COLOR_MAGENTA, "`%s'", lua_toboolean(L, i) ? "true" : "false" );
-			//ConColorMsg(Color(255, 0, 0), lua_toboolean(L, i) ? "true" : "false");
+                        console_print(TURBO_COLOR_MAGENTA, "`%d'", lua_toboolean(L, i) ? "true" : "false" );
 			break;
 
 		case LUA_TNUMBER:  /* numbers */
-			 console_print(COLOR_MAGENTA, "`%s'", lua_tonumber(L, i));
-                        //ConColorMsg(Color(255, 0, 0), "%g", lua_tonumber(L, i));
+			 console_print(TURBO_COLOR_MAGENTA, "`%d'", lua_tonumber(L, i));
 			break;
 
 		default:  /* other values */
-			console_print(COLOR_MAGENTA, "`%s'", lua_typename(L, t));
-                        //ConColorMsg(Color(255, 0, 0), "%s", lua_typename(L, t));
+			console_print(TURBO_COLOR_MAGENTA, "`%s'", lua_typename(L, t));
 			break;
 
 		}
-		console_print(COLOR_MAGENTA, " " ); /* put a separator */
-		//ConColorMsg(Color(255, 0, 0), "  ");  /* put a separator */
+		console_print(TURBO_COLOR_MAGENTA, " " ); /* put a separator */
 	}
-	console_print(COLOR_MAGENTA, "\n" ); /* put a separator */
-	//ConColorMsg(Color(255, 0, 0), "\n");  /* end the listing */
+	console_print(TURBO_COLOR_MAGENTA, "\n" ); /* put a separator */
 }
 
 //------------------------------------------------------------------------------
@@ -140,7 +132,8 @@ int SimThreadAffinityMask = 0;
 std::map<int, IServerNetworkable*> trains_pos;
 boost::unordered_map<std::string, std::string> load_files_cache;
 
-typedef struct {
+typedef struct 
+{
 	int message;
 	char system_name[64];
 	char name[64];
@@ -148,11 +141,11 @@ typedef struct {
 	double value;
 } thread_msg;
 
-struct thread_userdata {
+struct thread_userdata
+{
 	double current_time;
 	lua_State* L;
 	int finished;
-
 	boost::lockfree::spsc_queue<thread_msg> thread_to_sim, sim_to_thread;
 
 	thread_userdata() : thread_to_sim(1024), sim_to_thread(1024) //256
@@ -160,14 +153,16 @@ struct thread_userdata {
 	}
 };
 
-typedef struct {
+typedef struct 
+{
 	int ent_id;
 	int id;
 	char name[64];
 	double value;
 } rn_thread_msg;
 
-struct rn_thread_userdata {
+struct rn_thread_userdata
+{
 	double current_time;
 	lua_State* L;
 	int finished;
@@ -346,8 +341,7 @@ void threadSimulation(thread_userdata* userdata) {
 		//Simulate one step
 		if (userdata->current_time < target_time) {
 			userdata->current_time = target_time;
-			//lua_pushnumber(L, Plat_FloatTime());
-                        lua_pushnumber(L, Plat_FloatTime());
+                        lua_pushnumber(L, ElapsedTime());
 			lua_setglobal(L, "CurrentTime");
 
 			//Execute think
@@ -363,7 +357,7 @@ void threadSimulation(thread_userdata* userdata) {
 		}
 		else {
 			//Execute think
-			//lua_pushnumber(L, Plat_FloatTime());
+			lua_pushnumber(L, ElapsedTime());
 			
                         lua_setglobal(L, "CurrentTime");
 
@@ -933,122 +927,65 @@ LUA_FUNCTION (Think_handler)
 	target_time = g_GlobalVars->curtime;
 	shared_message msg;
 	if (printMessages.pop(msg)) {
-		//ConColorMsg(Color(255, 0, 255), msg.message);
-		LUA->PushSpecial(GarrysMod::Lua::SPECIAL_GLOB);
-		LUA->GetField(-1, "MsgC");
-		LUA->GetField(-2, "Color");
-		LUA->PushNumber(255);
-		LUA->PushNumber(0);
-		LUA->PushNumber(255);
-		LUA->Call(3, 1);
-		LUA->PushString(msg.message);
-		LUA->Call(2, 0);
-		LUA->Pop();
+		console_print(TURBO_COLOR_MAGENTA, "%s", msg.message);
 	}
 }
 
 /* void InstallHooks() {
-	ConColorMsg(Color(0, 255, 0), "Turbostroi: Installing hooks!\n");
+        console_print(TURBO_COLOR_MAGENTA, "Turbostroi: Installing hooks!\n");
 	SH_ADD_HOOK_STATICFUNC(IServerGameDLL, Think, engineServerDLL, Think_handler, false);
 } */
 
 LUA_FUNCTION(ClearLoadCache)
 {
 	load_files_cache.clear();
-	//ConColorMsg(Color(0, 255, 0), "Turbostroi: Cache cleared!\n");
-	LUA->PushSpecial(GarrysMod::Lua::SPECIAL_GLOB);
-	LUA->GetField(-1, "MsgC");
-	LUA->GetField(-2, "Color");
-	LUA->PushNumber(0);
-	LUA->PushNumber(255);
-	LUA->PushNumber(0);
-	LUA->Call(3, 1);
-	LUA->PushString("Turbostroi: Cache cleared!");
-	LUA->Call(2, 0);
-	LUA->Pop();
+        console_print(TURBO_COLOR_MAGENTA, "Turbostroi: Cache cleared!\n" );
+        return 0;
 }
 
-/*void InitInterfaces() {
-	//Sys_LoadInterface("engine", INTERFACEVERSION_VENGINESERVER, NULL, reinterpret_cast<void**>(&engineServer));
+void InitInterfaces() {
+	Sys_LoadInterface("engine", INTERFACEVERSION_VENGINESERVER, NULL, reinterpret_cast<void**>(&engineServer));
 	if (!engineServer)
 	{ 
-		//ConColorMsg(Color(255, 0, 0), "Turbostroi: Unable to load Engine Interface!\n");
-	LUA->PushSpecial(GarrysMod::Lua::SPECIAL_GLOB);
-	LUA->GetField(-1, "MsgC");
-	LUA->GetField(-2, "Color");
-	LUA->PushNumber(255);
-	LUA->PushNumber(0);
-	LUA->PushNumber(0);
-	LUA->Call(3, 1);
-	LUA->PushString("Turbostroi: Unable to load Engine Interface!");
-	LUA->Call(2, 0);
-	LUA->Pop();
+            console_print(TURBO_COLOR_RED, "Turbostroi: Unable to load Engine Interface!\n" );        
 	}
-	//Sys_LoadInterface("server", INTERFACEVERSION_SERVERGAMEDLL, NULL, reinterpret_cast<void**>(&engineServerDLL));
+	
+	Sys_LoadInterface("server", INTERFACEVERSION_SERVERGAMEDLL, NULL, reinterpret_cast<void**>(&engineServerDLL));
 	if (!engineServerDLL)
 	{
-		//ConColorMsg(Color(255, 0, 0), "Turbostroi: Unable to load SGameDLL Interface!\n");
-	LUA->PushSpecial(GarrysMod::Lua::SPECIAL_GLOB);
-	LUA->GetField(-1, "MsgC");
-	LUA->GetField(-2, "Color");
-	LUA->PushNumber(255);
-	LUA->PushNumber(0);
-	LUA->PushNumber(0);
-	LUA->Call(3, 1);
-	LUA->PushString("Turbostroi: Unable to load SGameDLL Interface!");
-	LUA->Call(2, 0);
-	LUA->Pop();
+            console_print(TURBO_COLOR_RED, "Turbostroi: Unable to load SGameDLL Interface!\n");
 	}
-	//Sys_LoadInterface("server", INTERFACEVERSION_PLAYERINFOMANAGER, NULL, reinterpret_cast<void**>(&playerInfoManager));
+	Sys_LoadInterface("server", INTERFACEVERSION_PLAYERINFOMANAGER, NULL, reinterpret_cast<void**>(&playerInfoManager));
 	if (!playerInfoManager)
 	{
-		//ConColorMsg(Color(255, 0, 0), "Turbostroi: Unable to load PlayerInfoManager Interface!\n");
-	LUA->PushSpecial(GarrysMod::Lua::SPECIAL_GLOB);
-	LUA->GetField(-1, "MsgC");
-	LUA->GetField(-2, "Color");
-	LUA->PushNumber(255);
-	LUA->PushNumber(0);
-	LUA->PushNumber(0);
-	LUA->Call(3, 1);
-	LUA->PushString("Turbostroi: Unable to load PlayerInfoManager Interface!");
-	LUA->Call(2, 0);
-	LUA->Pop();
+            console_print(TURBO_COLOR_RED, "Turbostroi: Unable to load PlayerInfoManager Interface!\n");
 	}
-	//Sys_LoadInterface("vstdlib", CVAR_INTERFACE_VERSION, NULL, reinterpret_cast<void**>(&g_pCVar));
-	if (!g_pCVar)
+	Sys_LoadInterface("vstdlib", CVAR_INTERFACE_VERSION, NULL, reinterpret_cast<void**>(&g_pCVar));
+	
+        if (!g_pCVar)
 	{
-		//ConColorMsg(Color(255, 0, 0), "Turbostroi: Unable to load CVAR Interface!\n");
-	LUA->PushSpecial(GarrysMod::Lua::SPECIAL_GLOB);
-	LUA->GetField(-1, "MsgC");
-	LUA->GetField(-2, "Color");
-	LUA->PushNumber(255);
-	LUA->PushNumber(0);
-	LUA->PushNumber(0);
-	LUA->Call(3, 1);
-	LUA->PushString("Turbostroi: Unable to load CVAR Interface!");
-	LUA->Call(2, 0);
-	LUA->Pop();
+            console_print(TURBO_COLOR_RED, "Turbostroi: Unable to load CVAR Interface!\n" );
 	}
-
-	if (playerInfoManager) g_GlobalVars = playerInfoManager->GetGlobalVars();
+       
+	//if (playerInfoManager) g_GlobalVars = playerInfoManager->GetGlobalVars();
 	//InstallHooks();
 
-	g_pCVar->RegisterConCommand(new ConCommand("turbostroi_clear_cache", ClearLoadCache, "Clear loaded files cache."));
-}*/
+	//g_pCVar->RegisterConCommand(new ConCommand("turbostroi_clear_cache", ClearLoadCache, "Clear loaded files cache."));
+}
 
 //------------------------------------------------------------------------------
 // Initialization
 //------------------------------------------------------------------------------
 GMOD_MODULE_OPEN() {
-	//InitInterfaces();
-
+        // если что-то будет вызывать segfault
+        signal(SIGSEGV, posix_death_signal);
+        InitInterfaces();
+        
 	//Check whether being ran on server
 	LUA->PushSpecial(GarrysMod::Lua::SPECIAL_GLOB);
 	LUA->GetField(-1,"SERVER");
 	if (LUA->IsType(-1,Type::NIL)) {
-		LUA->GetField(-2,"Msg");
-		LUA->PushString("Metrostroi: DLL failed to initialize (gm_turbostroi.dll can only be used on server)\n");
-		LUA->Call(1,0);
+		console_print (TURBO_COLOR_MAGENTA, "Metrostroi: DLL failed to initialize (gm_turbostroi library can only be used on server)\n");
 		return 0;
 	}
 	LUA->Pop(); //SERVER
@@ -1056,9 +993,10 @@ GMOD_MODULE_OPEN() {
 	//Check for global table
 	LUA->GetField(-1,"Metrostroi");
 	if (LUA->IsType(-1,Type::NIL)) {
-		LUA->GetField(-2,"Msg");
-		LUA->PushString("Metrostroi: DLL failed to initialize (cannot be used standalone without metrostroi addon)\n");
-		LUA->Call(1,0);
+		console_print (TURBO_COLOR_MAGENTA, "Metrostroi: DLL failed to initialize (cannot be used standalone without metrostroi addon)\n");
+                //LUA->GetField(-2,"Msg");
+		//LUA->PushString("Metrostroi: DLL failed to initialize (cannot be used standalone without metrostroi addon)\n");
+		//LUA->Call(1,0);
 		return 0;
 	}
 	LUA->Pop(); //Metrostroi
@@ -1118,8 +1056,6 @@ GMOD_MODULE_OPEN() {
 	LUA->Call(1,0);
 	LUA->Pop();
 
-	if (!printMessages.is_lock_free()) {
-		//ConColorMsg(Color(255, 0, 0), "Turbostroi: Not fully supported! \n");
 	LUA->PushSpecial(GarrysMod::Lua::SPECIAL_GLOB);
 	LUA->GetField(-1, "MsgC");
 	LUA->GetField(-2, "Color");
@@ -1130,14 +1066,24 @@ GMOD_MODULE_OPEN() {
 	LUA->PushString("Turbostroi: Not fully supported!");
 	LUA->Call(2, 0);
 	LUA->Pop();
+       
+        if ( !printMessages.is_lock_free() ) 
+        {
+		 console_print(TURBO_COLOR_MAGENTA, "Turbostroi: Not fully supported! \n");
 	}
-
 	return 0;
 }
 
 //------------------------------------------------------------------------------
 // Deinitialization
 //------------------------------------------------------------------------------
-GMOD_MODULE_CLOSE() {
+GMOD_MODULE_CLOSE() 
+{
+      	ConCommand* cmd = g_pCVar->FindCommand("turbostroi_clear_cache");
+	if (cmd != nullptr) {
+		g_pCVar->UnregisterConCommand(cmd);
+	}  
 	return 0;
 }
+
+
