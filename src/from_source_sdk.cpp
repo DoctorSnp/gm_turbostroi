@@ -451,3 +451,426 @@ void *Sys_GetProcAddress( HMODULE hModule, const char *pName )
 	return (void *)dlsym( (void *)hModule, pName );
 }
 
+
+/**
+ * 
+ * 
+ *          S O U R C E   S D K    
+ *              M I N  I M A L
+ * 
+ * 
+ */
+
+//-----------------------------------------------------------------------------
+// Default console command autocompletion function 
+//-----------------------------------------------------------------------------
+int DefaultCompletionFunc( const char *partial, char commands[ COMMAND_COMPLETION_MAXITEMS ][ COMMAND_COMPLETION_ITEM_LENGTH ] )
+{
+	return 0;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Constructs a console command
+//-----------------------------------------------------------------------------
+//ConCommand::ConCommand()
+//{
+//	m_bIsNewConCommand = true;
+//}
+
+
+
+ConCommand::ConCommand( const char *pName, FnCommandCallbackVoid_t callback, const char *pHelpString /*= 0*/, int flags /*= 0*/, FnCommandCompletionCallback completionFunc /*= 0*/ )
+{
+	// Set the callback
+	m_fnCommandCallbackV1 = callback;
+	m_bUsingNewCommandCallback = false;
+	m_bUsingCommandCallbackInterface = false;
+	m_fnCompletionCallback = completionFunc ? completionFunc : DefaultCompletionFunc;
+	m_bHasCompletionCallback = completionFunc != 0 ? true : false;
+
+	// Setup the rest
+	BaseClass::CreateBase( pName, pHelpString, flags );
+}
+
+ConCommand::ConCommand( const char *pName, FnCommandCallback_t callback, const char *pHelpString /*= 0*/, int flags /*= 0*/, FnCommandCompletionCallback completionFunc /*= 0*/ )
+{
+	// Set the callback
+	m_fnCommandCallback = callback;
+	m_bUsingNewCommandCallback = true;
+	m_fnCompletionCallback = completionFunc ? completionFunc : DefaultCompletionFunc;
+	m_bHasCompletionCallback = completionFunc != 0 ? true : false;
+	m_bUsingCommandCallbackInterface = false;
+
+	// Setup the rest
+	BaseClass::CreateBase( pName, pHelpString, flags );
+}
+
+ConCommand::ConCommand( const char *pName, ICommandCallback *pCallback, const char *pHelpString /*= 0*/, int flags /*= 0*/, ICommandCompletionCallback *pCompletionCallback /*= 0*/ )
+{
+	// Set the callback
+	m_pCommandCallback = pCallback;
+	m_bUsingNewCommandCallback = false;
+	m_pCommandCompletionCallback = pCompletionCallback;
+	m_bHasCompletionCallback = ( pCompletionCallback != 0 );
+	m_bUsingCommandCallbackInterface = true;
+
+	// Setup the rest
+	BaseClass::CreateBase( pName, pHelpString, flags );
+}
+
+//-----------------------------------------------------------------------------
+// Destructor
+//-----------------------------------------------------------------------------
+ConCommand::~ConCommand( void )
+{
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Invoke the function if there is one
+//-----------------------------------------------------------------------------
+void ConCommand::Dispatch( const CCommand &command )
+{
+	if ( m_bUsingNewCommandCallback )
+	{
+		if ( m_fnCommandCallback )
+		{
+			( *m_fnCommandCallback )( command );
+			return;
+		}
+	}
+	else if ( m_bUsingCommandCallbackInterface )
+	{
+		if ( m_pCommandCallback )
+		{
+			m_pCommandCallback->CommandCallback( command );
+			return;
+		}
+	}
+	else
+	{
+		if ( m_fnCommandCallbackV1 )
+		{
+			( *m_fnCommandCallbackV1 )();
+			return;
+		}
+	}
+
+	// Command without callback!!!
+	AssertMsg( 0, "Encountered ConCommand '%s' without a callback!\n", GetName() );
+}
+
+
+/**
+ * 
+ *  B A S E
+ * 
+ */
+
+//-----------------------------------------------------------------------------
+// Statically constructed list of ConCommandBases, 
+// used for registering them with the ICVar interface
+//-----------------------------------------------------------------------------
+ConCommandBase			*ConCommandBase::s_pConCommandBases = NULL;
+IConCommandBaseAccessor	*ConCommandBase::s_pAccessor = NULL;
+static int s_nCVarFlag = 0;
+static int s_nDLLIdentifier = -1;	// A unique identifier indicating which DLL this convar came from
+static bool s_bRegistered = false;
+
+
+//-----------------------------------------------------------------------------
+// Purpose: Default constructor
+//-----------------------------------------------------------------------------
+ConCommandBase::ConCommandBase( void )
+{
+	m_bRegistered   = false;
+	m_pszName       = NULL;
+	m_pszHelpString = NULL;
+
+	m_nFlags = 0;
+	m_pNext  = NULL;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: The base console invoked command/cvar interface
+// Input  : *pName - name of variable/command
+//			*pHelpString - help text
+//			flags - flags
+//-----------------------------------------------------------------------------
+ConCommandBase::ConCommandBase( const char *pName, const char *pHelpString /*=0*/, int flags /*= 0*/ )
+{
+	CreateBase( pName, pHelpString, flags );
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+ConCommandBase::~ConCommandBase( void )
+{
+}
+
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Input  : *pName - 
+//			callback - 
+//			*pHelpString - 
+//			flags - 
+//-----------------------------------------------------------------------------
+void ConCommandBase::CreateBase( const char *pName, const char *pHelpString /*= 0*/, int flags /*= 0*/ )
+{
+	m_bRegistered = false;
+
+	// Name should be static data
+	Assert( pName );
+	m_pszName = pName;
+	m_pszHelpString = pHelpString ? pHelpString : "";
+
+	m_nFlags = flags;
+
+#ifdef ALLOW_DEVELOPMENT_CVARS
+	m_nFlags &= ~FCVAR_DEVELOPMENTONLY;
+#endif
+
+	if ( !( m_nFlags & FCVAR_UNREGISTERED ) )
+	{
+		m_pNext = s_pConCommandBases;
+		s_pConCommandBases = this;
+	}
+	else
+	{
+		// It's unregistered
+		m_pNext = NULL;
+	}
+
+	// If s_pAccessor is already set (this ConVar is not a global variable),
+	//  register it.
+	if ( s_pAccessor )
+	{
+		Init();
+	}
+}
+
+
+//-----------------------------------------------------------------------------
+// Purpose: Used internally by OneTimeInit to initialize.
+//-----------------------------------------------------------------------------
+void ConCommandBase::Init()
+{
+	if ( s_pAccessor )
+	{
+		s_pAccessor->RegisterConCommandBase( this );
+	}
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Output : Returns true on success, false on failure.
+//-----------------------------------------------------------------------------
+bool ConCommandBase::IsCommand( void ) const
+{ 
+//	Assert( 0 ); This can't assert. . causes a recursive assert in Sys_Printf, etc.
+	return true;
+}
+
+
+//-----------------------------------------------------------------------------
+// Purpose: Return name of the command/var
+// Output : const char
+//-----------------------------------------------------------------------------
+const char *ConCommandBase::GetName( void ) const
+{
+	return m_pszName;
+}
+
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Input  : flag - 
+// Output : Returns true on success, false on failure.
+//-----------------------------------------------------------------------------
+bool ConCommandBase::IsFlagSet( int flag ) const
+{
+	return ( flag & m_nFlags ) ? true : false;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Input  : flags - 
+//-----------------------------------------------------------------------------
+void ConCommandBase::AddFlags( int flags )
+{
+	m_nFlags |= flags;
+
+#ifdef ALLOW_DEVELOPMENT_CVARS
+	m_nFlags &= ~FCVAR_DEVELOPMENTONLY;
+#endif
+}
+
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Output : const ConCommandBase
+//-----------------------------------------------------------------------------
+const ConCommandBase *ConCommandBase::GetNext( void ) const
+{
+	return m_pNext;
+}
+
+ConCommandBase *ConCommandBase::GetNext( void )
+{
+	return m_pNext;
+}
+
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Output : const char
+//-----------------------------------------------------------------------------
+const char *ConCommandBase::GetHelpText( void ) const
+{
+	return m_pszHelpString;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Has this cvar been registered
+// Output : Returns true on success, false on failure.
+//-----------------------------------------------------------------------------
+bool ConCommandBase::IsRegistered( void ) const
+{
+	return m_bRegistered;
+}
+
+//-----------------------------------------------------------------------------
+// Returns the DLL identifier
+//-----------------------------------------------------------------------------
+CVarDLLIdentifier_t ConCommandBase::GetDLLIdentifier() const
+{
+	return s_nDLLIdentifier;
+}
+
+
+//-----------------------------------------------------------------------------
+// Purpose: Returns true if this is a command 
+//-----------------------------------------------------------------------------
+bool ConCommand::IsCommand( void ) const
+{ 
+	return true;
+}
+
+
+//-----------------------------------------------------------------------------
+// Purpose: Calls the autocompletion method to get autocompletion suggestions
+//-----------------------------------------------------------------------------
+int	ConCommand::AutoCompleteSuggest( const char *partial, CUtlVector< CUtlString > &commands )
+{
+	if ( m_bUsingCommandCallbackInterface )
+	{
+		if ( !m_pCommandCompletionCallback )
+			return 0;
+		return m_pCommandCompletionCallback->CommandCompletionCallback( partial, commands );
+	}
+
+	Assert( m_fnCompletionCallback );
+	if ( !m_fnCompletionCallback )
+		return 0;
+
+	char rgpchCommands[ COMMAND_COMPLETION_MAXITEMS ][ COMMAND_COMPLETION_ITEM_LENGTH ];
+	int iret = ( m_fnCompletionCallback )( partial, rgpchCommands );
+	for ( int i = 0 ; i < iret; ++i )
+	{
+		CUtlString str = rgpchCommands[ i ];
+		commands.AddToTail( str );
+	}
+	return iret;
+}
+
+
+//-----------------------------------------------------------------------------
+// Returns true if the console command can autocomplete 
+//-----------------------------------------------------------------------------
+bool ConCommand::CanAutoComplete( void )
+{
+	return m_bHasCompletionCallback;
+}
+
+
+
+//-----------------------------------------------------------------------------
+// Simple string class. 
+//-----------------------------------------------------------------------------
+
+//-----------------------------------------------------------------------------
+// Either allocates or reallocates memory to the length
+//
+// Allocated space for length characters.  It automatically adds space for the 
+// nul and the cached length at the start of the memory block.  Will adjust
+// m_pString and explicitly set the nul at the end before returning.
+void *CUtlString::AllocMemory( uint32 length )
+{
+	void *pMemoryBlock;
+	if ( m_pString )
+	{
+		pMemoryBlock = realloc( m_pString, length + 1 );
+	}
+	else
+	{
+		pMemoryBlock = malloc( length + 1 );
+	}
+	m_pString = (char*)pMemoryBlock;
+	m_pString[ length ] = 0;
+
+	return pMemoryBlock;
+}
+
+/**
+ * 
+ * CUtlString
+ * 
+ */
+
+//-----------------------------------------------------------------------------
+void CUtlString::SetDirect( const char *pValue, int nChars )
+{
+	if ( pValue && nChars > 0 )
+	{
+		if ( pValue == m_pString )
+		{
+			AssertMsg( nChars == Q_strlen(m_pString), "CUtlString::SetDirect does not support resizing strings in place." );
+			return; // Do nothing. Realloc in AllocMemory might move pValue's location resulting in a bad memcpy.
+		}
+
+		Assert( nChars <= Min<int>( strnlen(pValue, nChars) + 1, nChars ) );
+		AllocMemory( nChars );
+		Q_memcpy( m_pString, pValue, nChars );
+	}
+	else
+	{
+		Purge();
+	}
+
+}
+
+
+void CUtlString::Set( const char *pValue )
+{
+	int length = pValue ? V_strlen( pValue ) : 0;
+	SetDirect( pValue, length );
+}
+
+const char *CUtlString::Get( ) const
+{
+	if (!m_pString)
+	{
+		return "";
+	}
+	return m_pString;
+}
+
+
+void CUtlString::Purge()
+{
+    free( m_pString );
+    m_pString = NULL;
+}
+
+

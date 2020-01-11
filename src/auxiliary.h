@@ -1,6 +1,7 @@
 #ifndef     __TURBOSTROI_AUXILIARY_H__
 #define    __TURBOSTROI_AUXILIARY_H__
 
+#define  TURBOSTROI_DEBUG_MESSAGES
 
 #define   TURBO_COLOR_BLACK       "\u001b[30m"
 #define   TURBO_COLOR_RED           "\u001b[31m"
@@ -20,6 +21,6 @@ double ElapsedTime ();
 
 
 void console_print(const char *color, const char *format, ... );
-
+void console_print_debug(const char *color, const char *format, ... );
 
 #endif //__TURBOSTROI_AUXILIARY_H__

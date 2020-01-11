@@ -44,6 +44,26 @@ void console_print(const char *color, const char *format, ... )
 #endif
 }
 
+void console_print_debug(const char *color, const char *format, ... )
+{
+#ifdef POSIX
+#ifdef TURBOSTROI_DEBUG_MESSAGES
+    va_list args;
+    va_start(args, format);
+    printf("%s", color);
+    vprintf(format, args);
+    printf("%s", TURBO_COLOR_RESET);
+    fflush(stdout);
+    va_end(args);
+#endif
+#else
+    static_assert ( false, "Console_print_debug for realised only for POSIX!!" )		
+                            //ConColorMsg(Color(255, 0, 0), "`%s'", lua_tostring(L, i));
+#endif
+}
+
+
+
 /**
  * @brief Перехватчик сигнала segfault
  * @param  сигнал

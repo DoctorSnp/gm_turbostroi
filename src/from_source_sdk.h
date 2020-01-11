@@ -50,4 +50,16 @@ void V_strncpy( char *pDest, char const *pSrc, int maxLen );
 void V_FixSlashes( char *pname, char separator /* = CORRECT_PATH_SEPARATOR */ );
 void *Sys_GetProcAddress( HMODULE hModule, const char *pName );
 
+/*
+class IMemAlloc //MyMemAlloc : public IMemAlloc
+{
+public:
+	// Release versions
+	static void *Alloc( size_t nSize ) override { return malloc(nSize); };
+	static  void *Realloc( void *pMem, size_t nSize ) override   { return realloc(pMem, nSize); }
+	static  void Free( void *pMem ) override { free(pMem) ; }
+       // void *Expand_NoLongerSupported( void *pMem, size_t nSize ) { override ; }
+};
+*/
+
 #endif // __FROM_INTERFACE_H__
