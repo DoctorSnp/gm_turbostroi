@@ -1,6 +1,6 @@
 #!/bin/sh
 
-TARGET="$HOME/MetrostroiServerYar/steam_server/garrysmod/lua/bin"
+TARGET="$HOME/MetrostroiServer/steam_server/garrysmod/lua/bin"
 NAME="libgmsv_turbostroi.so"
 NAME_INSTALL="gmsv_turbostroi_linux.dll"
 

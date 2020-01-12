@@ -21,21 +21,16 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/unordered_map.hpp>
 
+//  ============== EXPERIMENT 
+//#include "external/metamod-source/sample_mm/engine_wrappers.h"
+// ============================
+
 #include "sourcehook_impl.h"
 
 using namespace SourceHook;
-//#include "lua.hpp"
 
 //SourceSDK
-#undef _UNICODE
-
-//#include "luajit/lua.h"
-//#include "luajit/lua.hpp"
-/*extern "C"
-{
-#include "from_luajit.h"   
-}*/
-
+//#undef _UNICODE
 
 extern "C" {
 	#include "external/lua.h"
@@ -87,13 +82,15 @@ using namespace GarrysMod::Lua;
 SourceHook::Impl::CSourceHookImpl g_SourceHook;
 SourceHook::ISourceHook *g_SHPtr = &g_SourceHook;
 int g_PLID = 0;
-CGlobalVars *g_GlobalVars = NULL;
-
-IVEngineServer *engineServer = NULL;
-IServerGameDLL *engineServerDLL = NULL;
-IGameEventManager2 *gameEventManager = NULL; // game events interface
-IPlayerInfoManager *playerInfoManager = NULL;
-ICvar *g_pCVar = NULL;
+CGlobalVars *g_GlobalVars = nullptr;
+// чёто похожее
+// CGlobalVars *gpGlobals;
+// Эксперимент
+IVEngineServer *engineServer = nullptr;
+IServerGameDLL *engineServerDLL = nullptr;
+IGameEventManager2 *gameEventManager = nullptr; // game events interface
+IPlayerInfoManager *playerInfoManager = nullptr;
+ICvar *g_pCVar = nullptr ;
 
 //------------------------------------------------------------------------------
 // Lua Utils
@@ -449,7 +446,7 @@ void threadRailnetworkSimulation(rn_thread_userdata* userdata) {
 // Metrostroi Lua API
 //------------------------------------------------------------------------------
 void load(GarrysMod::Lua::ILuaBase* LUA, lua_State* L, char* filename, char* path, char* variable = NULL, char* defpath = NULL, bool json = false) {
-        console_print_debug(TURBO_COLOR_CYAN ,"void load\n");
+    //console_print_debug(TURBO_COLOR_CYAN ,"void load\n");
 	//Load up "sv_turbostroi.lua" in the new JIT environment
 	const char* file_data = NULL;
 	auto cache_item = load_files_cache.find(filename);
@@ -559,20 +556,33 @@ LUA_FUNCTION( API_InitializeTrain )
 {
 	console_print_debug(TURBO_COLOR_CYAN ,"API_InitializeTrain\n");
        
-        CBaseHandle* EntHandle;
+    CBaseHandle* EntHandle;
 	IServerNetworkable* Entity; 
         
 	//Get entity index
 	EntHandle = (CBaseHandle*)LUA->GetUserType<CBaseHandle>(1, Type::ENTITY);
          
-	edict_t* EntityEdict = engineServer->PEntityOfEntIndex(EntHandle->GetEntryIndex());
-	console_print(TURBO_COLOR_YELLOW, "============ Debug 1.1\n");
+    int index = EntHandle->GetEntryIndex();
+    console_print_debug(TURBO_COLOR_YELLOW, "============ Debug 0.1 index is: %d\n", index);
+    if( engineServer == nullptr)
+    {
+        console_print(TURBO_COLOR_RED, "Achtung!!!!! 'engineServer' is nullptr object!\n");
+    }
+    edict_t* EntityEdict = engineServer->PEntityOfEntIndex(index);
+    if (EntityEdict == nullptr)
+    {
+        console_print(TURBO_COLOR_RED, "NULL 'EntityEdict' object!\n");
+    }
+    console_print_debug(TURBO_COLOR_YELLOW, "============ Debug 1 ============\n");
         // здесь крашится
+    if (EntityEdict != nullptr)
         Entity = EntityEdict->GetNetworkable();
-        console_print(TURBO_COLOR_YELLOW, "============ Debug 1.2\n");
-        
-	trains_pos.insert(std::pair<int, IServerNetworkable*>(EntHandle->GetEntryIndex(), Entity));
-	//Get current time
+    console_print_debug(TURBO_COLOR_YELLOW, "============ Debug 2 ============\n");
+
+    //if (EntityEdict != nullptr)
+    trains_pos.insert(std::pair<int, IServerNetworkable*>(EntHandle->GetEntryIndex(), Entity));
+
+    //Get current time
 	LUA->PushSpecial(GarrysMod::Lua::SPECIAL_GLOB);
 	LUA->GetField(-1, "CurTime");
 	LUA->Call(0, 1);
@@ -602,8 +612,8 @@ LUA_FUNCTION( API_InitializeTrain )
 		char* system_path = strchr(systems, '\n') + 1;
                 
 		strncpy(filename, system_path, strchr(system_path, '\n') - system_path);
-		console_print_debug(TURBO_COLOR_CYAN, "finding_in file name '%s'\n", filename);
-                load(LUA, L, filename, "LUA");
+        //console_print_debug(TURBO_COLOR_CYAN, "finding_in file name '%s'\n", filename);
+        load(LUA, L, filename, "LUA");
 		systems = system_path + strlen(filename) + 1;
 	}
 	//Initialize all the systems reported by the train
@@ -621,7 +631,7 @@ LUA_FUNCTION( API_InitializeTrain )
 		systems = system_type + strlen(system_type) + 1;
 	}
 	loadSystemsList[0] = 0;
-
+    console_print_debug(TURBO_COLOR_YELLOW, "============ Exit from WHILE LOOP ============\n");
 	//Initialize systems
 	lua_getglobal(L, "Initialize");
 	if (lua_pcall(L, 0, 0, 0)) {
@@ -651,7 +661,7 @@ LUA_FUNCTION( API_InitializeTrain )
         if (pthread_setaffinity_np(thread.native_handle(), sizeof(cpu_set_t),  &SimThreadAffinityMask) != 0 )
             console_print(TURBO_COLOR_RED,"Turbostroi: SetSTAffinityMask failed on train thread! \n");
 #endif
-        console_print(TURBO_COLOR_YELLOW, "============ Debug 4 Ogogoooooo!!!!\n");
+        console_print(TURBO_COLOR_YELLOW, "============EXIT FROM API_InitializeTrain \n");
 	return 0;
 }
 
@@ -961,7 +971,7 @@ LUA_FUNCTION( API_SetMTAffinityMask )
         for (int j = 0; j < boost::thread::hardware_concurrency(); j++)
                CPU_SET(j, &MTAffinityMask);
         
-	console_print(TURBO_COLOR_MAGENTA, "Turbostroi: Main Thread Running on CPU%d \n", sched_getcpu());
+    console_print(TURBO_COLOR_MAGENTA, "Turbostroi: Main Thread Running on CPU %d \n", sched_getcpu());
         
         for (int j = 0; j <boost::thread::hardware_concurrency() ; j++) {
                if (CPU_ISSET(j, &MTAffinityMask))
@@ -988,12 +998,6 @@ LUA_FUNCTION( API_SetSTAffinityMask )
 
 
 #endif
-
-
-
-
-
-
 
 LUA_FUNCTION( API_StartRailNetwork ) 
 {
@@ -1027,25 +1031,24 @@ void ClearLoadCache(const CCommand &command) {
 }
 
 void InitInterfaces() {
-	Sys_LoadInterface("engine", INTERFACEVERSION_VENGINESERVER, NULL, reinterpret_cast<void**>(&engineServer));
-	if (!engineServer)
+    if (!(Sys_LoadInterface("engine", INTERFACEVERSION_VENGINESERVER, NULL, reinterpret_cast<void**>(&engineServer))))
 	{ 
-		console_print(TURBO_COLOR_MAGENTA, "Turbostroi: Unable to load Engine Interface!\n");
+        console_print(TURBO_COLOR_RED, "Turbostroi: Unable to load Engine Interface!\n");
 	}
 	Sys_LoadInterface("server", INTERFACEVERSION_SERVERGAMEDLL, NULL, reinterpret_cast<void**>(&engineServerDLL));
 	if (!engineServerDLL)
 	{
-		console_print(TURBO_COLOR_MAGENTA, "Turbostroi: Unable to load SGameDLL Interface!\n");
+        console_print(TURBO_COLOR_RED, "Turbostroi: Unable to load SGameDLL Interface!\n");
 	}
 	Sys_LoadInterface("server", INTERFACEVERSION_PLAYERINFOMANAGER, NULL, reinterpret_cast<void**>(&playerInfoManager));
 	if (!playerInfoManager)
 	{
-		console_print(TURBO_COLOR_MAGENTA, "Turbostroi: Unable to load PlayerInfoManager Interface!\n");
+        console_print(TURBO_COLOR_RED, "Turbostroi: Unable to load PlayerInfoManager Interface!\n");
 	}
 	Sys_LoadInterface("vstdlib", CVAR_INTERFACE_VERSION, NULL, reinterpret_cast<void**>(&g_pCVar));
 	if (!g_pCVar)
 	{
-		console_print(TURBO_COLOR_MAGENTA, "Turbostroi: Unable to load CVAR Interface!\n");
+        console_print(TURBO_COLOR_RED, "Turbostroi: Unable to load CVAR Interface!\n");
 	}
 
 	if (playerInfoManager) g_GlobalVars = playerInfoManager->GetGlobalVars();
@@ -1069,8 +1072,7 @@ CPU_ZERO(&SimThreadAffinityMask);
 //------------------------------------------------------------------------------
 GMOD_MODULE_OPEN() {
 	init();
-        
-        InitInterfaces();
+    InitInterfaces();
 
 	//Check whether being ran on server
 	LUA->PushSpecial(GarrysMod::Lua::SPECIAL_GLOB);

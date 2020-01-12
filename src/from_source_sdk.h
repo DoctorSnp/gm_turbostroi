@@ -2,14 +2,14 @@
 #define   __FROM_INTERFACE_H__
 
 //********************************
-#include <interface.h>
-#include <eiface.h>
-#include <Color.h>
-#include <dbg.h>
-#include <game/server/iplayerinfo.h>
-#include <iserver.h>
-#include <convar.h>
-#include <icvar.h>
+#include "interface.h"
+#include "eiface.h"
+#include "Color.h"
+#include "dbg.h"
+#include "../game/server/iplayerinfo.h"
+#include "iserver.h"
+#include "convar.h"
+#include "icvar.h"
 #include "auxiliary.h"
 //********************************
 

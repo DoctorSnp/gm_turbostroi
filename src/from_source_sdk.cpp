@@ -5,24 +5,23 @@
 // Output : 
 //-----------------------------------------------------------------------------
 bool Sys_LoadInterface(
-    
-        
-	const char *pModuleName,
+    const char *pModuleName,
 	const char *pInterfaceVersionName,
 	CSysModule **pOutModule,
 	void **pOutInterface )
 {
     
 	CSysModule *pMod = Sys_LoadModule( pModuleName );
-	if ( !pMod ) {
-                console_print(TURBO_COLOR_YELLOW, "Fuck 1\n");
+    if ( !pMod )
+    {
+        console_print(TURBO_COLOR_YELLOW, "Sys_LoadModule 1\n");
 		return false;
         }
 
 	CreateInterfaceFn fn = Sys_GetFactory( pMod );
 	if ( !fn )
 	{      
-                console_print(TURBO_COLOR_YELLOW, "Fuck 2\n");
+        console_print(TURBO_COLOR_YELLOW, "Sys_GetFactory \n");
 		Sys_UnloadModule( pMod );
 		return false;
 	}
@@ -30,14 +29,15 @@ bool Sys_LoadInterface(
 	*pOutInterface = fn( pInterfaceVersionName, NULL );
 	if ( !( *pOutInterface ) )
 	{
-		console_print(TURBO_COLOR_YELLOW, "Fuck 3\n");
-                Sys_UnloadModule( pMod );
+        console_print(TURBO_COLOR_YELLOW, "pInterfaceVersionName error\n");
+        Sys_UnloadModule( pMod );
 		return false;
 	}
 
 	if ( pOutModule )
 		*pOutModule = pMod;
-        console_print(TURBO_COLOR_YELLOW, "Zer good!!!\n");
+
+    console_print(TURBO_COLOR_YELLOW, "Sys_LoadInterface loaded! Module size %d\n", sizeof (pOutInterface) );
 	return true;
 }
 
@@ -240,7 +240,7 @@ HMODULE Sys_LoadLibrary( const char *pLibraryName, Sys_Flags flags )
 		dlopen_mode |= RTLD_NOLOAD;
         
         console_print(TURBO_COLOR_YELLOW, "Try load library '%s' \n", str);
-	HMODULE ret = ( HMODULE )dlopen( str, dlopen_mode );
+    HMODULE ret = ( HMODULE )dlopen( str, dlopen_mode );
 	if ( !ret && !( flags & SYS_NOLOAD ) )
 	{
 		const char *pError = dlerror();
